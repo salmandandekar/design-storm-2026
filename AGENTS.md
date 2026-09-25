@@ -31,8 +31,10 @@ challenge itself. `guide.md` explains the domain and Jake's models from zero;
 ## The 3D map
 
 `design-storm-water-system-3d.html` is hand-maintained; there is no build step for
-the page itself. It reads generated JSON from `water-system-3d/` and geodata from
-`strontia-brief/`, so those directories travel with it. Serve it rather than opening
+the page itself. It reads generated JSON from `water-system-3d/`, geodata from
+`strontia-brief/`, and (for the sub-basin, water-year-replay, and reservoir-column
+features) `teams/explainable-viz/viz-data/`, so those directories travel with it;
+it degrades gracefully if the team folder is absent. Serve it rather than opening
 the file directly, because it fetches JSON:
 
 ```
