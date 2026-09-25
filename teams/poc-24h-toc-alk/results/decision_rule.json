@@ -1,0 +1,40 @@
+{
+  "registered_at": "2026-09-25",
+  "registered_before_any_model_results": true,
+  "hypothesis": {
+    "H1": "Upstream watershed/hydrologic/reservoir signals available at forecast issue time T provide statistically significant skill, beyond naive baselines, for predicting an actionable TOC or alkalinity change at the Foothills influent ~24 hours ahead (lead = 1 day).",
+    "H0": "They do not; at 24 hours the targets are dominated by day-to-day persistence and actionable changes are not predictable from this data."
+  },
+  "primary_endpoint": {
+    "description": "24-hour change skill: level-space MAE of the best lab-known model vs the persistence baseline (y_hat(T+1) = y(T)), pooled over rolling-origin folds test2023..test2026.",
+    "supported_if_all_of": [
+      "skill_vs_persistence > 0",
+      "95% moving-block bootstrap CI of skill excludes 0 (skill_lo > 0)",
+      "Diebold-Mariano (HLN-corrected, absolute-error loss) p < 0.05 vs persistence"
+    ]
+  },
+  "secondary_endpoint_event_warning": {
+    "description": "Onset warning at lead 1: predicting entry into TOC > 3 mg/L or Alk < 60 mg/L when not in state at T, pooled over rolling-origin folds.",
+    "supported_if_all_of": [
+      "Wilson 95% lower bound of onset precision > pooled onset base rate among eligible days",
+      "onset recall >= 0.5"
+    ],
+    "insufficiency_rule": "If pooled onset count < 20 for a target, report 'insufficient evidence' for that target's event endpoint regardless of point estimates."
+  },
+  "scenarios": {
+    "primary": "lab_known (day-T grab sample available at issue time); lab_blind reported alongside as the soft-sensor-only answer",
+    "leads_tested_days": [1, 2, 3, 4, 7],
+    "twelve_hour_note": "12-hour prediction is not testable from daily lab data; scoped out explicitly."
+  },
+  "verdict_language": {
+    "supported": "both primary-endpoint criteria families met for the target",
+    "not_supported": "criteria testable but not met",
+    "insufficient_evidence": "criteria not testable at reasonable power (e.g., event scarcity)"
+  },
+  "notes": [
+    "No shuffled splits anywhere; rolling-origin by season only.",
+    "Thresholds TOC>3, Alk<60 are Jake's operational round numbers; confirm with operators.",
+    "All claims restricted to April-December; the influent record has no Jan-Mar data.",
+    "Readings are provisional; USGS revises after publication."
+  ]
+}

@@ -1,0 +1,7 @@
+Corrections applied by loaders (documented artifacts only):
+- USGS Dissolved_Oxygen_Min: replaced 1 negative sentinel value(s) (e.g. -999999) with NaN
+- DWR Precip: cumulative counter with 9 negative reset(s); daily diff kept for diagnostics only, excluded as a predictor
+- MichiganCreek SWE: flagged 4 known-bad day(s) 2026-05-12..2026-05-15 (NRCS feed error, per README); file excluded from models
+- Strontia xlsx: stripped trailing spaces from 3 column name(s)
+
+All readings are provisional (USGS revises after publication).
