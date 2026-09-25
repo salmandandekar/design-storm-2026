@@ -1,0 +1,9 @@
+dataset,rows,start,end,calendar_days,missing_days,columns,total_nans,units
+FoothillsInfluent,1115,2022-04-01,2026-08-19,1602,487,TOC_mg_L;Alk_mg_L,0,TOC mg/L; Alk mg/L (grab samples)
+USGS_South_Platte,1027,2022-04-01,2026-08-19,1602,575,Dissolved_Oxygen_Max;Dissolved_Oxygen_Mean;Dissolved_Oxygen_Min;Specific_Cond_Max;Specific_Cond_Mean;Specific_Cond_Min;Temp_C_Max;Temp_C_Mean;Temp_C_Min;Turbidity_Max;Turbidity_Median;Turbidity_Min;pH_Max;pH_Median;pH_Min,552,cond uS/cm; temp C; turbidity FNU; DO mg/L
+SouthPlatteTelemetry,1602,2022-04-01,2026-08-19,1602,0,Flow_CFS;GageHeight_ft;Precip;Precip_daily_diag,1,flow cfs; gage ft; Precip cumulative (dirty)
+SouthPlatteFlow,1602,2022-04-01,2026-08-19,1602,0,Flow_CFS,0,flow cfs
+HoosierPass,1601,2022-04-02,2026-08-19,1601,0,SWE,0,SWE inches
+MichiganCreek,1605,2022-04-02,2026-08-23,1605,0,SWE;SWE_known_bad,1,SWE inches (known-bad 2026-05-12..15)
+USC00058022,1601,2022-04-01,2026-08-18,1601,0,PRCP;SNOW;TMAX;TMIN,8,PRCP/SNOW inches; TMAX/TMIN deg F; ~2-day latency
+Strontia_sonde,16093,2026-04-07,2026-08-19,135,31,Temp C;Conductivity;Vertical Position;pH;ORP mV;Turbidity NTU;Chl ug/L;Phycocyanin;ODO & sat;ODO mg/L,0,"VP is depth in m (Aug temp 17.8C at VP<=5 vs 14.9C at VP>=40, warm=surface); temp C; cond uS/cm; turb NTU"
