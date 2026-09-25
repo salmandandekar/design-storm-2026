@@ -1,0 +1,203 @@
+{
+  "status": "ok",
+  "generated_at": "2026-09-25T19:31:34.216651+00:00",
+  "retrieved_at": null,
+  "source": "committed",
+  "latest_rainfall_observation": "2026-08-18",
+  "issue_time": "2026-08-22",
+  "gauge_count": 1,
+  "coverage_fraction": 1.0,
+  "travel_time_provenance": "empirical_time_ordered_cv_non_physical",
+  "travel_times": {
+    "USC00058022": "4 days 00:00:00"
+  },
+  "products": {
+    "arrival_nowcast": {
+      "toc": {
+        "value": 3.230090362557197,
+        "lower": 1.9037453713895272,
+        "upper": 4.556435353724867,
+        "target_time": "2026-08-22",
+        "metrics": {
+          "n": 1083,
+          "train_n": 866,
+          "test_n": 217,
+          "train_start": "2022-04-18",
+          "train_end": "2026-08-19",
+          "holdout_mae": 0.4631326654151958,
+          "holdout_rmse": 0.5487384545826689,
+          "holdout_r2": -15.560173832218734,
+          "holdout_adjusted_r2": -15.872629942260598,
+          "train_adjusted_r2": 0.2941686532834289,
+          "cv_mae": 0.6218647883519276,
+          "baseline": "training_mean",
+          "baseline_mae": 0.6242741669416032,
+          "beats_baseline": true,
+          "durbin_watson": 0.07764997916899215,
+          "coefficients": {
+            "const": 2.3832671610705813,
+            "rain_effective_rainfall_in_1d": 0.03504549348268194,
+            "rain_effective_rainfall_in_3d": -0.0034423850932106263,
+            "rain_effective_rainfall_in_7d": 0.084377145952719,
+            "rain_effective_rainfall_in_14d": 0.42949405213092495
+          },
+          "pvalues": {
+            "const": 0.0,
+            "rain_effective_rainfall_in_1d": 0.8156654801199373,
+            "rain_effective_rainfall_in_3d": 0.9710952861596045,
+            "rain_effective_rainfall_in_7d": 0.1903738137175747,
+            "rain_effective_rainfall_in_14d": 6.45070911147061e-30
+          },
+          "vif": {
+            "rain_effective_rainfall_in_1d": 1.6761484360706076,
+            "rain_effective_rainfall_in_3d": 2.6450807171767075,
+            "rain_effective_rainfall_in_7d": 3.162074597027825,
+            "rain_effective_rainfall_in_14d": 2.1565772897808735
+          }
+        }
+      },
+      "alk": {
+        "value": 54.29974981549125,
+        "lower": 35.172569842248954,
+        "upper": 73.42692978873356,
+        "target_time": "2026-08-22",
+        "metrics": {
+          "n": 1083,
+          "train_n": 866,
+          "test_n": 217,
+          "train_start": "2022-04-18",
+          "train_end": "2026-08-19",
+          "holdout_mae": 5.574791508638521,
+          "holdout_rmse": 6.843053049048532,
+          "holdout_r2": -1.3277672627893566,
+          "holdout_adjusted_r2": -1.3716873998231183,
+          "train_adjusted_r2": 0.06036839006931616,
+          "cv_mae": 7.731367978985215,
+          "baseline": "training_mean",
+          "baseline_mae": 6.285306935856369,
+          "beats_baseline": true,
+          "durbin_watson": 0.0646760631620985,
+          "coefficients": {
+            "const": 59.149089195504025,
+            "rain_effective_rainfall_in_1d": -0.31267511981118845,
+            "rain_effective_rainfall_in_3d": -0.5195345427790669,
+            "rain_effective_rainfall_in_7d": -0.5475896216206739,
+            "rain_effective_rainfall_in_14d": -2.3803921118072346
+          },
+          "pvalues": {
+            "const": 0.0,
+            "rain_effective_rainfall_in_1d": 0.8869788825611739,
+            "rain_effective_rainfall_in_3d": 0.7086491573164879,
+            "rain_effective_rainfall_in_7d": 0.5612827510999641,
+            "rain_effective_rainfall_in_14d": 8.829269163057068e-06
+          },
+          "vif": {
+            "rain_effective_rainfall_in_1d": 1.6761484360706076,
+            "rain_effective_rainfall_in_3d": 2.6450807171767075,
+            "rain_effective_rainfall_in_7d": 3.162074597027825,
+            "rain_effective_rainfall_in_14d": 2.1565772897808735
+          }
+        }
+      }
+    },
+    "forecast_24h": {
+      "toc": {
+        "value": 3.2360462908692504,
+        "lower": 1.904111174897113,
+        "upper": 4.567981406841388,
+        "target_time": "2026-08-23",
+        "metrics": {
+          "n": 1082,
+          "train_n": 865,
+          "test_n": 217,
+          "train_start": "2022-04-18",
+          "train_end": "2026-08-18",
+          "holdout_mae": 0.4617395978247661,
+          "holdout_rmse": 0.5459739728503507,
+          "holdout_r2": -15.364304711042085,
+          "holdout_adjusted_r2": -15.673065177288162,
+          "train_adjusted_r2": 0.28722043179962276,
+          "cv_mae": 0.6160340100424019,
+          "baseline": "training_mean",
+          "baseline_mae": 0.6246887403105937,
+          "beats_baseline": true,
+          "durbin_watson": 0.10456080207780095,
+          "coefficients": {
+            "const": 2.38868329840202,
+            "rain_effective_rainfall_in_1d": 0.07576915028052056,
+            "rain_effective_rainfall_in_3d": 0.016484530009495884,
+            "rain_effective_rainfall_in_7d": 0.10550525290162449,
+            "rain_effective_rainfall_in_14d": 0.40334638956832225
+          },
+          "pvalues": {
+            "const": 0.0,
+            "rain_effective_rainfall_in_1d": 0.6155275778188932,
+            "rain_effective_rainfall_in_3d": 0.8625007748530239,
+            "rain_effective_rainfall_in_7d": 0.10185772063125932,
+            "rain_effective_rainfall_in_14d": 7.428085865205694e-27
+          },
+          "vif": {
+            "rain_effective_rainfall_in_1d": 1.6633278975412844,
+            "rain_effective_rainfall_in_3d": 2.624270310396989,
+            "rain_effective_rainfall_in_7d": 3.1314567487521745,
+            "rain_effective_rainfall_in_14d": 2.1464637540012528
+          },
+          "persistence_mae": 0.05879629629629624,
+          "beats_persistence": false
+        }
+      },
+      "alk": {
+        "value": 54.195784557572324,
+        "lower": 35.050584568844144,
+        "upper": 73.3409845463005,
+        "target_time": "2026-08-23",
+        "metrics": {
+          "n": 1082,
+          "train_n": 865,
+          "test_n": 217,
+          "train_start": "2022-04-18",
+          "train_end": "2026-08-18",
+          "holdout_mae": 5.6083491461438815,
+          "holdout_rmse": 6.86137625912084,
+          "holdout_r2": -1.351708017437383,
+          "holdout_adjusted_r2": -1.3960798668229941,
+          "train_adjusted_r2": 0.054642747793083424,
+          "cv_mae": 7.767656493754969,
+          "baseline": "training_mean",
+          "baseline_mae": 6.292198396419912,
+          "beats_baseline": true,
+          "durbin_watson": 0.0677028048209683,
+          "coefficients": {
+            "const": 58.978766716902435,
+            "rain_effective_rainfall_in_1d": -1.1462700801141732,
+            "rain_effective_rainfall_in_3d": 0.0006552937204521976,
+            "rain_effective_rainfall_in_7d": -1.0208507465386856,
+            "rain_effective_rainfall_in_14d": -2.024050382390163
+          },
+          "pvalues": {
+            "const": 0.0,
+            "rain_effective_rainfall_in_1d": 0.6020188130746363,
+            "rain_effective_rainfall_in_3d": 0.9996229348847826,
+            "rain_effective_rainfall_in_7d": 0.27704357621240105,
+            "rain_effective_rainfall_in_14d": 0.00014075921562757418
+          },
+          "vif": {
+            "rain_effective_rainfall_in_1d": 1.6633278975412844,
+            "rain_effective_rainfall_in_3d": 2.624270310396989,
+            "rain_effective_rainfall_in_7d": 3.1314567487521745,
+            "rain_effective_rainfall_in_14d": 2.1464637540012528
+          },
+          "persistence_mae": 1.7652777777777775,
+          "beats_persistence": false
+        }
+      }
+    }
+  },
+  "warnings": [
+    "Source readings are provisional and subject to revision. Denver Water data terms apply.",
+    "NOAA GHCN daily data may publish about two days late",
+    "This adapter uses one rain gauge and is not a spatially representative network.",
+    "Research model: predictions are shown even when validation does not beat a baseline.",
+    "Travel time was selected empirically and is not a physical measurement."
+  ]
+}
