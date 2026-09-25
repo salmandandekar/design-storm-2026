@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Storm: the data, explained in 2D</title>
+<style>
+  :root {
+    --bg: #14181d; --panel: #1a2027; --panel2: #20272f; --line: #2c343d;
+    --text: #f2f4f6; --muted: #b8c0c8; --faint: #8892a0;
+    --toc: #199e70; --alk: #3987e5; --flow: #3987e5; --turb: #d95926;
+    --cond: #e5c07b; --prcp: #6fc3ff; --swe: #e8f1fa; --accent: #ffd166;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--prcp); }
+  header { padding: 26px 20px 6px; max-width: 1060px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 26px; }
+  header .sub { color: var(--muted); max-width: 72ch; }
+  .provisional { display: inline-block; margin-top: 10px; padding: 4px 10px;
+    border: 1px solid rgba(255,209,102,0.5); border-radius: 6px;
+    color: var(--accent); font-size: 12.5px; }
+  nav { position: sticky; top: 0; z-index: 5; background: rgba(20,24,29,0.96);
+    backdrop-filter: blur(4px); border-bottom: 1px solid var(--line);
+    margin-top: 14px; }
+  nav .tabs { max-width: 1060px; margin: 0 auto; padding: 8px 16px;
+    display: flex; gap: 6px; flex-wrap: wrap; }
+  nav button { background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 13px;
+    font: inherit; font-size: 13.5px; cursor: pointer; }
+  nav button.on { background: var(--panel2); color: var(--text);
+    border-color: #46525e; }
+  main { max-width: 1060px; margin: 0 auto; padding: 10px 16px 30px; }
+  section.view { display: none; padding-top: 18px; }
+  section.view.on { display: block; }
+  h2 { font-size: 21px; margin: 8px 0 4px; }
+  .lede { color: var(--muted); max-width: 78ch; margin: 6px 0 10px; }
+  details.why { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 14px; margin: 10px 0 16px;
+    color: var(--muted); max-width: 900px; }
+  details.why summary { color: var(--text); cursor: pointer; font-weight: 600;
+    font-size: 14px; }
+  details.why p { margin: 8px 0 2px; font-size: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  .chart-label { color: var(--muted); font-size: 12.5px; margin: 10px 0 2px;
+    display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .chart-label .readout { color: var(--text); font-variant-numeric: tabular-nums; }
+  canvas.chart { width: 100%; display: block; }
+  .note { color: var(--faint); font-size: 12.5px; margin: 6px 0; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .chips button { background: var(--panel2); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px;
+    font: inherit; font-size: 12.5px; cursor: pointer; }
+  .chips button.on { color: var(--bg); background: var(--accent);
+    border-color: var(--accent); font-weight: 600; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted);
+    font-size: 12.5px; margin: 4px 0; }
+  .legend .key { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .swatch { width: 14px; height: 3px; border-radius: 2px;
+    display: inline-block; }
+  .gloss { border-bottom: 1px dotted var(--faint); cursor: pointer; }
+  .gloss-def { color: var(--faint); font-size: 0.92em; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+    gap: 12px; }
+  .basin-card h3 { margin: 0 0 2px; font-size: 16.5px; }
+  .basin-card .meta { color: var(--faint); font-size: 12.5px; margin-bottom: 6px; }
+  .tag { display: inline-block; border-radius: 5px; padding: 1px 7px;
+    font-size: 11.5px; margin-right: 6px; }
+  .tag.east { background: rgba(217,89,38,0.25); color: #ffb08a; }
+  .tag.west { background: rgba(57,135,229,0.25); color: #9cc8ff; }
+  .hygiene li { color: var(--muted); font-size: 13px; margin: 3px 0; }
+  #tooltip { position: fixed; display: none; pointer-events: none; z-index: 20;
+    background: rgba(16,20,24,0.95); border: 1px solid var(--line);
+    border-radius: 7px; padding: 5px 9px; font-size: 12.5px;
+    color: var(--text); max-width: 260px; }
+  footer { border-top: 1px solid var(--line); margin-top: 26px;
+    padding: 18px 16px 40px; }
+  footer .inner { max-width: 1060px; margin: 0 auto; color: var(--muted);
+    font-size: 13.5px; }
+  footer h3 { color: var(--text); font-size: 15px; margin: 0 0 6px; }
+  .err { color: #ff9c9c; font-size: 13.5px; }
+  @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>The data behind the Design Storm, explained</h1>
+  <div class="sub">Five linked views of the Denver Water challenge data:
+  how mountain snow becomes river flow, how storms move water quality
+  downstream, and what arrives at the Foothills treatment plant. Companion to
+  the <a href="../../design-storm-water-system-3d">3D system map</a>; every
+  chart is drawn from the committed files in this repository, nothing is
+  invented.</div>
+  <div class="provisional">Provisional data: USGS, NRCS and NOAA revise
+  readings after publication. Denver Water's data terms apply
+  (<a href="TERMS.md" style="color:inherit">TERMS.md</a>).</div>
+</header>
+
+<nav><div class="tabs">
+  <button data-view="timeline" class="on">1 · System timeline</button>
+  <button data-view="sonde">2 · Reservoir by depth</button>
+  <button data-view="storms">3 · Storm anatomy</button>
+  <button data-view="seasons">4 · Seasonal rhythm</button>
+  <button data-view="basins">5 · Sub-basin behaviour</button>
+</div></nav>
+
+<main>
+
+<section class="view on" id="view-timeline">
+  <h2>The system as one timeline</h2>
+  <p class="lede">Five stacked panels in the order the water moves:
+  snowpack melts, rain falls, the river rises, its quality shifts, and days
+  later the treatment plant feels it. Drag on the small strip to zoom a
+  period; hover anywhere to read every panel at the same date.</p>
+  <details class="why"><summary>Why this data</summary>
+    <p>These are exactly the predictor chains Jake's soft-sensor models and
+    the 24-hour proof of concept used: Hoosier Pass snow water equivalent
+    (the station that replaced Michigan Creek), NOAA precipitation (the DWR
+    gauge's own precip counter is a dirty cumulative and is excluded), DWR
+    streamflow at Waterton, the USGS sentinel-gage quality readings above
+    Strontia Springs, and Denver Water's own lab record at the Foothills
+    influent — the two numbers everyone is trying to see coming. Seeing them
+    stacked is the fastest way to understand why the models lean on
+    turbidity × flow and conductance.</p></details>
+  <div class="card">
+    <div class="chart-label"><span>Full record — drag to zoom, double-click to reset</span><span class="readout" id="tl-readout"></span></div>
+    <canvas class="chart" id="tl-brush" style="height:56px"></canvas>
+    <div id="tl-panels"></div>
+    <div class="note">TOC and alkalinity have no January–March values: the
+    winter gap is structural (the river sensor is pulled before freeze-up),
+    not missing data.</div>
+  </div>
+  <div class="card">
+    <strong style="font-size:14px">Data hygiene applied to these views</strong>
+    <ul class="hygiene" id="hygiene-list"></ul>
+  </div>
+</section>
+
+<section class="view" id="view-sonde">
+  <h2>Strontia Springs Reservoir, by depth</h2>
+  <p class="lede">The profiling sonde takes readings all the way down the
+  water column — 16,093 of them across Apr 7 to Aug 19, 2026. Each pixel
+  column is one day; depth runs downward, like the reservoir. Watch the warm
+  surface layer form in June: that is <span class="gloss" data-term="stratification">stratification</span>,
+  and it decides which water the dam sends to the plant.</p>
+  <details class="why"><summary>Why this data</summary>
+    <p>This is the newest and least-explored dataset in the repository, and
+    the heart of Scenario 2: unlike every daily series, it resolves
+    <em>depth</em>. The 24-hour proof of concept found it redundant for
+    next-day prediction, but it is the right foundation for the multi-day
+    reservoir-mixing question — the lag between the river and the plant
+    lives in this water column. Vertical position is depth in metres
+    (verified: low values read warm surface water).</p></details>
+  <div class="card">
+    <div class="chips" id="sonde-params"></div>
+    <div class="chart-label"><span id="sonde-title"></span><span id="sonde-scale-note" class="readout"></span></div>
+    <canvas class="chart" id="sonde-heatmap" style="height:330px"></canvas>
+    <div class="chart-label"><span>Colour scale</span></div>
+    <canvas id="sonde-colorbar" style="height:14px;width:100%;max-width:420px;display:block"></canvas>
+    <div class="chart-label"><span>Surface minus bottom temperature, °C — near zero means the reservoir is mixed; large means stratified</span><span class="readout" id="strat-readout"></span></div>
+    <canvas class="chart" id="sonde-strat" style="height:90px"></canvas>
+    <div class="note">Dashed vertical lines mark the biggest 2026 rain days at
+    the NOAA station and the Aug 14–15 storm from view 3. One sonde, one
+    location, one partial season: treat patterns as a first look, not a
+    climatology.</div>
+  </div>
+</section>
+
+<section class="view" id="view-storms">
+  <h2>Anatomy of a storm</h2>
+  <p class="lede">Pick an event. Rain falls (top), the river answers within
+  hours to days, turbidity spikes as the runoff arrives at the sentinel gage,
+  and the plant's lab numbers move in the days after. The offsets printed on
+  each event are measured from these files — they are the intuition behind
+  every lag in Jake's models.</p>
+  <details class="why"><summary>Why this data</summary>
+    <p>The proof of concept showed the rare, large day-to-day changes in TOC
+    are storm-driven, so storms are where advance warning matters. The
+    Aug 14–15, 2026 event uses the committed 15-minute USGS series behind the
+    3D map's radar replay; the other events are the biggest precipitation
+    days in the NOAA record with their local flow and turbidity responses.
+    One caution: the NOAA gauge is a single point in a 4,000-square-mile
+    watershed — a storm can soak the upper basin and miss it entirely.</p></details>
+  <div class="chips" id="storm-chips"></div>
+  <div class="card" id="storm-panel"></div>
+</section>
+
+<section class="view" id="view-seasons">
+  <h2>The seasonal rhythm, year over year</h2>
+  <p class="lede">Every water year (Oct 1 to Sep 30) overlaid on one axis.
+  The dashed line is the median of all years; pick a year to follow it
+  through snowpack, runoff, and what the plant received. Wet 2023 and the
+  leaner years read as different shapes, not just different sizes.</p>
+  <details class="why"><summary>Why this data</summary>
+    <p>The 3D map's influent panel says "the spring-runoff rhythm is the
+    pattern to notice" — this view is that sentence as a chart, in the same
+    fold-by-water-year idiom the map already uses for reservoirs and snow
+    stations. It is Scenario 3's wet-against-dry comparison: snowpack sets
+    the runoff, runoff sets the TOC pulse, and the plant's hard weeks arrive
+    on the falling limb.</p></details>
+  <div class="chips" id="season-chips"></div>
+  <div class="card" id="season-panels"></div>
+</section>
+
+<section class="view" id="view-basins">
+  <h2>How each sub-basin behaves</h2>
+  <p class="lede">Denver's water comes from five instrumented drainage
+  basins on both sides of the Continental Divide — the dashed outlines on
+  the 3D map. Each card shows a basin's snowpack against its own median,
+  when the melt started and finished, and its outlet river. East-slope water
+  flows to the plant by gravity; west-slope water only arrives through a
+  tunnel.</p>
+  <details class="why"><summary>Why this data</summary>
+    <p>Basin polygons come from the USGS NLDI service (committed in
+    strontia-brief/), member snow stations are assigned by point-in-polygon
+    exactly as the 3D map does, and SWE history is the committed NRCS record
+    behind the map's snow-station overlays. Outlet flows for the west-slope
+    and nested gages need a one-time USGS fetch
+    (<code>fetch_basin_flows.py</code>); the sentinel basin's flow is the
+    committed DWR record. Sub-basin behaviour is the "where is the water
+    coming from this year" context every prediction sits inside.</p></details>
+  <div class="chips" id="basin-wy-chips"></div>
+  <div class="grid2" id="basin-cards"></div>
+</section>
+
+</main>
+
+<div id="tooltip"></div>
+
+<footer><div class="inner">
+  <h3>Honest limitations</h3>
+  <p>These views build intuition; they do not claim predictive skill. The
+  pre-registered 24-hour study in
+  <a href="../poc-24h-toc-alk/README.md">teams/poc-24h-toc-alk</a> found that
+  at 24 hours "tomorrow will look like today" is essentially unbeatable with
+  this data (day-to-day R² ≈ 0.96 for both targets), and that upstream
+  data's value plausibly lives at multi-day horizons, where the persistence
+  forecast decays. The winter gap (no Jan–Mar lab values) is structural. The
+  sonde covers one location and one partial season. Every reading here is
+  provisional and subject to revision by USGS, NRCS, NOAA and DWR; Denver
+  Water's data terms travel with every derived file in this folder.</p>
+</div></footer>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------- helpers */
+
+const PAL = { toc: "#199e70", alk: "#3987e5", flow: "#3987e5",
+  turb: "#d95926", cond: "#e5c07b", prcp: "#6fc3ff", swe: "#e8f1fa",
+  temp: "#ff8fa3", accent: "#ffd166" };
+
+const GLOSSARY = {
+  "stratification": "In summer a reservoir separates into a warm, light surface layer floating on cold, dense bottom water. The layers barely mix, so water quality differs by depth.",
+  "turnover": "When the surface cools in autumn (or warms in spring) the density difference vanishes and the whole water column mixes top to bottom.",
+  "chlorophyll": "The pigment of algae. High chlorophyll means an algal bloom, which changes taste, oxygen, and treatment work.",
+  "phycocyanin": "The pigment of cyanobacteria (blue-green algae), the bloom type utilities watch hardest.",
+  "SWE": "Snow water equivalent: the depth of water you would get by melting the snowpack where it sits.",
+  "TOC": "Total organic carbon: dissolved plant and soil matter. It reacts with disinfection chlorine to form regulated byproducts, so the plant doses around it.",
+  "alkalinity": "The water's capacity to buffer acids. Coagulation chemicals are acidic, so alkalinity sets how much chemistry treatment takes.",
+  "turbidity": "Cloudiness: suspended sediment and debris. The most important early warning a treatment plant gets.",
+  "conductance": "How easily the water conducts electricity, tracking dissolved minerals. The single best proxy for alkalinity.",
+  "water year": "Hydrologists start the year on Oct 1, when snowpack begins building, so one winter's snow and its runoff share a year.",
+  "persistence": "The forecast 'tomorrow = today'. The baseline any useful model must beat, and at 24 hours here, it wins.",
+  "melt-out": "The day the snowpack reaches (near) zero. After melt-out the basin stops sending snowmelt and the river recedes.",
+};
+
+const $ = (id) => document.getElementById(id);
+const fmt = (v) => v === null || v === undefined ? "–"
+  : Math.abs(v) >= 100 ? Math.round(v).toLocaleString()
+  : Math.abs(v) >= 10 ? (Math.round(v * 10) / 10).toString()
+  : (Math.round(v * 100) / 100).toString();
+
+function annotateGlossary(root) {
+  for (const el of root.querySelectorAll("p.lede, details.why p")) {
+    let html = el.innerHTML;
+    for (const term of Object.keys(GLOSSARY)) {
+      if (root.dataset["g_" + term] || html.includes("data-term")) continue;
+    }
+    el.innerHTML = html;
+  }
+}
+document.body.addEventListener("click", (e) => {
+  const g = e.target.closest(".gloss");
+  if (!g) return;
+  const next = g.nextElementSibling;
+  if (next && next.classList.contains("gloss-def")) { next.remove(); return; }
+  const def = document.createElement("span");
+  def.className = "gloss-def";
+  def.textContent = " (" + GLOSSARY[g.dataset.term] + ") ";
+  g.after(def);
+});
+
+async function fetchJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(url + " -> " + r.status);
+  return r.json();
+}
+
+function setupCanvas(canvas) {
+  const ratio = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * ratio; canvas.height = h * ratio;
+  const g = canvas.getContext("2d");
+  g.scale(ratio, ratio);
+  return [g, w, h];
+}
+
+function niceDomain(values, zero) {
+  let lo = Infinity, hi = -Infinity;
+  for (const v of values) if (v !== null && isFinite(v)) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  if (lo === Infinity) return [0, 1];
+  if (zero) lo = Math.min(0, lo);
+  if (hi === lo) hi = lo + 1;
+  const padding = (hi - lo) * 0.06;
+  return [zero ? lo : lo - padding, hi + padding];
+}
+
+function monthTicks(dateAt, n) {
+  const ticks = [];
+  const span = n > 1 ? (new Date(dateAt(n - 1)) - new Date(dateAt(0))) / 86400000 : 0;
+  const yearly = span > 720, daily = span <= 45;
+  let prev = null;
+  for (let i = 0; i < n; i++) {
+    const d = new Date(dateAt(i) + "T12:00:00");
+    const key = yearly ? d.getFullYear()
+      : daily ? d.getDate() : d.getFullYear() * 12 + d.getMonth();
+    if (prev !== null && key !== prev)
+      ticks.push({ i, text: yearly ? String(d.getFullYear())
+        : daily ? String(d.getDate())
+        : d.toLocaleDateString(undefined, { month: "short" }) });
+    prev = key;
+  }
+  const step = Math.ceil(ticks.length / 9);
+  return ticks.filter((_, k) => k % step === 0);
+}
+
+/* drawChart: the one generic panel painter.
+   o = { n, series: [{at(i), color, type: "line"|"bars", axis: "L"|"R",
+         width, dash, fill}], ticks: [{i,text}], cursor: idx|-1,
+         vlines: [{i, color, label}], markers: [{i, v, axis, color, label}],
+         zeroL, zeroR } */
+function drawChart(canvas, o) {
+  const [g, w, h] = setupCanvas(canvas);
+  const pad = { top: 14, bottom: 16, left: 44, right: 46 };
+  const iw = w - pad.left - pad.right, ih = h - pad.top - pad.bottom;
+  const x = (i) => pad.left + (o.n <= 1 ? 0 : (i / (o.n - 1)) * iw);
+
+  const domains = {};
+  for (const axis of ["L", "R"]) {
+    const vals = [];
+    for (const s of o.series) if ((s.axis || "L") === axis)
+      for (let i = 0; i < o.n; i++) vals.push(s.at(i));
+    domains[axis] = niceDomain(vals, axis === "L" ? o.zeroL : o.zeroR);
+  }
+  const y = (v, axis) => {
+    const [lo, hi] = domains[axis || "L"];
+    return pad.top + (1 - (v - lo) / (hi - lo)) * ih;
+  };
+
+  g.strokeStyle = "rgba(255,255,255,0.09)";
+  g.lineWidth = 1;
+  g.strokeRect(pad.left, pad.top, iw, ih);
+
+  for (const vl of o.vlines || []) {
+    g.strokeStyle = vl.color || "rgba(255,209,102,0.6)";
+    g.setLineDash([4, 3]); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(x(vl.i), pad.top); g.lineTo(x(vl.i), pad.top + ih); g.stroke();
+    g.setLineDash([]);
+    if (vl.label) {
+      g.fillStyle = vl.color || "rgba(255,209,102,0.9)";
+      g.font = "10px -apple-system, sans-serif"; g.textAlign = "left";
+      g.fillText(vl.label, x(vl.i) + 3, pad.top + 9);
+    }
+  }
+
+  for (const s of o.series) {
+    const axis = s.axis || "L";
+    g.lineWidth = s.width || 1.8;
+    g.strokeStyle = s.color; g.fillStyle = s.color;
+    if (s.dash) g.setLineDash(s.dash);
+    if (s.type === "bars") {
+      const bw = Math.max(1, iw / o.n - 1);
+      for (let i = 0; i < o.n; i++) {
+        const v = s.at(i);
+        if (v === null || !isFinite(v) || v === 0) continue;
+        g.fillRect(x(i) - bw / 2, y(v, axis), bw, y(domains[axis][0] < 0 ? 0 : domains[axis][0], axis) - y(v, axis));
+      }
+    } else {
+      g.beginPath();
+      let pen = false;
+      for (let i = 0; i < o.n; i++) {
+        const v = s.at(i);
+        if (v === null || !isFinite(v)) { pen = false; continue; }
+        pen ? g.lineTo(x(i), y(v, axis)) : g.moveTo(x(i), y(v, axis));
+        pen = true;
+      }
+      g.stroke();
+    }
+    g.setLineDash([]);
+  }
+
+  for (const m of o.markers || []) {
+    if (m.v === null || m.v === undefined) continue;
+    g.fillStyle = m.color;
+    g.beginPath(); g.arc(x(m.i), y(m.v, m.axis || "L"), 3.5, 0, Math.PI * 2); g.fill();
+    if (m.label) {
+      g.font = "10px -apple-system, sans-serif"; g.textAlign = "center";
+      g.fillText(m.label, x(m.i), y(m.v, m.axis || "L") - 7);
+    }
+  }
+
+  g.font = "10px -apple-system, sans-serif";
+  const leftSeries = o.series.find((s) => (s.axis || "L") === "L");
+  const rightSeries = o.series.find((s) => s.axis === "R");
+  if (leftSeries) {
+    g.fillStyle = leftSeries.color; g.textAlign = "right";
+    g.fillText(fmt(domains.L[1]), pad.left - 4, pad.top + 8);
+    g.fillText(fmt(domains.L[0]), pad.left - 4, pad.top + ih);
+  }
+  if (rightSeries) {
+    g.fillStyle = rightSeries.color; g.textAlign = "left";
+    g.fillText(fmt(domains.R[1]), w - pad.right + 4, pad.top + 8);
+    g.fillText(fmt(domains.R[0]), w - pad.right + 4, pad.top + ih);
+  }
+  g.fillStyle = "rgba(184,192,200,0.9)"; g.textAlign = "center";
+  for (const t of o.ticks || []) g.fillText(t.text, x(t.i), h - 4);
+
+  if (o.cursor >= 0 && o.cursor < o.n) {
+    g.strokeStyle = "rgba(255,255,255,0.4)"; g.lineWidth = 1;
+    g.beginPath(); g.moveTo(x(o.cursor), pad.top); g.lineTo(x(o.cursor), pad.top + ih); g.stroke();
+    for (const s of o.series) {
+      const v = s.at(o.cursor);
+      if (v === null || !isFinite(v)) continue;
+      g.fillStyle = s.color;
+      g.beginPath(); g.arc(x(o.cursor), y(v, s.axis || "L"), 3, 0, Math.PI * 2); g.fill();
+    }
+  }
+  canvas._pad = pad; canvas._n = o.n;
+}
+
+function indexAtEvent(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const pad = canvas._pad, n = canvas._n;
+  const frac = (e.clientX - rect.left - pad.left) / (rect.width - pad.left - pad.right);
+  return Math.max(0, Math.min(n - 1, Math.round(frac * (n - 1))));
+}
+
+const tooltip = $("tooltip");
+function showTooltip(e, html) {
+  tooltip.innerHTML = html;
+  tooltip.style.display = "block";
+  const pageW = document.documentElement.clientWidth;
+  tooltip.style.left = Math.min(e.clientX + 14, pageW - 270) + "px";
+  tooltip.style.top = (e.clientY + 14) + "px";
+}
+function hideTooltip() { tooltip.style.display = "none"; }
+
+/* ------------------------------------------------------------- data + tabs */
+
+let DS = null, SONDE = null, WY = null, STORMS = null, BASINS = null,
+    BASIN_FLOWS = null;
+
+const tabs = document.querySelectorAll("nav button");
+tabs.forEach((b) => b.onclick = () => selectView(b.dataset.view));
+function selectView(name) {
+  tabs.forEach((b) => b.classList.toggle("on", b.dataset.view === name));
+  document.querySelectorAll("section.view").forEach((s) =>
+    s.classList.toggle("on", s.id === "view-" + name));
+  history.replaceState(null, "", "#" + name);
+  REDRAW[name] && REDRAW[name]();
+}
+const REDRAW = {};
+window.addEventListener("resize", () => {
+  const on = document.querySelector("section.view.on");
+  if (on) REDRAW[on.id.replace("view-", "")]?.();
+});
+
+/* ------------------------------------------------------- view 1: timeline */
+
+const TL = { x0: 0, x1: 0, cursor: -1, brush: null };
+
+const TL_PANELS = [
+  { key: "swe", label: "Snowpack — snow water equivalent at Hoosier Pass SNOTEL, inches",
+    series: () => [{ src: "swe_hoosier", color: PAL.swe, name: "SWE, in" }], zeroL: true },
+  { key: "prcp", label: "Precipitation — NOAA station USC00058022, inches (bars)",
+    series: () => [{ src: "prcp", color: PAL.prcp, type: "bars", name: "Rain, in" }], zeroL: true },
+  { key: "flow", label: "Streamflow — South Platte at Waterton (DWR), cubic ft/s",
+    series: () => [{ src: "flow", color: PAL.flow, name: "Flow, cfs" }], zeroL: true },
+  { key: "quality", label: "River quality above Strontia — turbidity, FNU (orange, left) and specific conductance, µS/cm (gold, right)",
+    series: () => [{ src: "turb", color: PAL.turb, name: "Turbidity, FNU" },
+                   { src: "cond", color: PAL.cond, axis: "R", name: "Conductance" }], zeroL: true },
+  { key: "plant", label: "At the plant — TOC, mg/L (green, left) and alkalinity, mg/L (blue, right); lab measurements, known only after arrival",
+    series: () => [{ src: "toc", color: PAL.toc, name: "TOC, mg/L" },
+                   { src: "alk", color: PAL.alk, axis: "R", name: "Alkalinity" }] },
+];
+
+function initTimeline() {
+  TL.x0 = 0; TL.x1 = DS.dates.length - 1;
+  const host = $("tl-panels");
+  host.innerHTML = TL_PANELS.map((p) => `
+    <div class="chart-label"><span>${p.label}</span></div>
+    <canvas class="chart" id="tl-${p.key}" style="height:110px"></canvas>`).join("");
+  $("hygiene-list").innerHTML =
+    DS.hygiene_notes.map((n) => `<li>${n}</li>`).join("");
+
+  for (const p of TL_PANELS) {
+    const canvas = $("tl-" + p.key);
+    canvas.addEventListener("mousemove", (e) => {
+      TL.cursor = TL.x0 + indexAtEvent(canvas, e);
+      drawTimeline();
+    });
+    canvas.addEventListener("mouseleave", () => { TL.cursor = -1; drawTimeline(); });
+  }
+
+  const brush = $("tl-brush");
+  let dragStart = null;
+  brush.addEventListener("mousedown", (e) => { dragStart = brushIndex(brush, e); });
+  brush.addEventListener("mousemove", (e) => {
+    if (dragStart === null) return;
+    const i = brushIndex(brush, e);
+    TL.x0 = Math.min(dragStart, i); TL.x1 = Math.max(dragStart, i);
+    drawTimeline();
+  });
+  window.addEventListener("mouseup", () => {
+    if (dragStart === null) return;
+    dragStart = null;
+    if (TL.x1 - TL.x0 < 14) { TL.x0 = 0; TL.x1 = DS.dates.length - 1; }
+    drawTimeline();
+  });
+  brush.addEventListener("dblclick", () => {
+    TL.x0 = 0; TL.x1 = DS.dates.length - 1; drawTimeline();
+  });
+  drawTimeline();
+}
+
+function brushIndex(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const frac = (e.clientX - rect.left) / rect.width;
+  return Math.max(0, Math.min(DS.dates.length - 1,
+    Math.round(frac * (DS.dates.length - 1))));
+}
+
+function drawTimeline() {
+  const n = TL.x1 - TL.x0 + 1;
+  const dateAt = (i) => DS.dates[TL.x0 + i];
+  const ticks = monthTicks(dateAt, n);
+  const cursor = TL.cursor >= TL.x0 && TL.cursor <= TL.x1 ? TL.cursor - TL.x0 : -1;
+
+  for (const p of TL_PANELS) {
+    drawChart($("tl-" + p.key), {
+      n, ticks, cursor, zeroL: p.zeroL,
+      series: p.series().map((s) => ({
+        at: (i) => DS.series[s.src][TL.x0 + i],
+        color: s.color, type: s.type, axis: s.axis,
+      })),
+    });
+  }
+
+  const [g, w, h] = setupCanvas($("tl-brush"));
+  const all = DS.series.flow, N = all.length;
+  const [lo, hi] = niceDomain(all, true);
+  g.fillStyle = "#20272f"; g.fillRect(0, 0, w, h);
+  g.strokeStyle = "rgba(111,195,255,0.7)"; g.lineWidth = 1;
+  g.beginPath();
+  let pen = false;
+  for (let i = 0; i < N; i++) {
+    const v = all[i];
+    if (v === null) { pen = false; continue; }
+    const px = (i / (N - 1)) * w, py = 4 + (1 - (v - lo) / (hi - lo)) * (h - 8);
+    pen ? g.lineTo(px, py) : g.moveTo(px, py);
+    pen = true;
+  }
+  g.stroke();
+  g.fillStyle = "rgba(255,209,102,0.18)";
+  g.fillRect((TL.x0 / (N - 1)) * w, 0, ((TL.x1 - TL.x0) / (N - 1)) * w, h);
+  g.strokeStyle = PAL.accent;
+  g.strokeRect((TL.x0 / (N - 1)) * w, 0.5, ((TL.x1 - TL.x0) / (N - 1)) * w, h - 1);
+  g.fillStyle = "rgba(184,192,200,0.9)"; g.font = "10px sans-serif";
+  g.textAlign = "left"; g.fillText(DS.dates[0], 4, h - 5);
+  g.textAlign = "right"; g.fillText(DS.dates[N - 1], w - 4, h - 5);
+
+  const r = $("tl-readout");
+  if (TL.cursor >= 0) {
+    const i = TL.cursor;
+    const parts = [DS.dates[i]];
+    for (const p of TL_PANELS)
+      for (const s of p.series())
+        parts.push(`${s.name} <b style="color:${s.color}">${fmt(DS.series[s.src][i])}</b>`);
+    r.innerHTML = parts.join(" · ");
+  } else r.textContent = "";
+}
+REDRAW.timeline = () => DS && drawTimeline();
+
+/* ---------------------------------------------------------- view 2: sonde */
+
+const SN = { param: "temp", cursor: null };
+
+const RAMP = [[26, 35, 126], [28, 116, 165], [60, 170, 130], [222, 200, 80], [216, 78, 48]];
+function rampColor(f) {
+  f = Math.max(0, Math.min(1, f));
+  const seg = Math.min(RAMP.length - 2, Math.floor(f * (RAMP.length - 1)));
+  const t = f * (RAMP.length - 1) - seg;
+  const a = RAMP[seg], b = RAMP[seg + 1];
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
+}
+
+const SONDE_LOG = new Set(["turb", "cond"]);
+
+function percentileDomain(grid, log) {
+  const vals = [];
+  for (const row of grid) for (const v of row)
+    if (v !== null && isFinite(v) && (!log || v > 0)) vals.push(log ? Math.log10(v) : v);
+  vals.sort((a, b) => a - b);
+  if (!vals.length) return [0, 1];
+  const q = (p) => vals[Math.min(vals.length - 1, Math.floor(p * vals.length))];
+  const lo = q(0.02), hi = q(0.98);
+  return [lo, hi === lo ? lo + 1 : hi];
+}
+
+function sondeStormLines() {
+  const lines = [];
+  const dayIdx = new Map(SONDE.days.map((d, i) => [d, i]));
+  const rains = DS.dates.map((d, i) => ({ d, v: DS.series.prcp[i] }))
+    .filter((r) => dayIdx.has(r.d) && r.v !== null && r.v > 0)
+    .sort((a, b) => b.v - a.v).slice(0, 3);
+  for (const r of rains) lines.push({ i: dayIdx.get(r.d), label: `rain ${fmt(r.v)}"` });
+  if (dayIdx.has("2026-08-14"))
+    lines.push({ i: dayIdx.get("2026-08-14"), label: "Aug 14 storm" });
+  return lines;
+}
+
+function initSonde() {
+  const chips = $("sonde-params");
+  chips.innerHTML = Object.entries(SONDE.params).map(([k, p]) =>
+    `<button data-p="${k}" class="${k === SN.param ? "on" : ""}">${p.label}</button>`).join("");
+  chips.querySelectorAll("button").forEach((b) => b.onclick = () => {
+    SN.param = b.dataset.p;
+    chips.querySelectorAll("button").forEach((x) =>
+      x.classList.toggle("on", x === b));
+    drawSonde();
+  });
+
+  const heat = $("sonde-heatmap");
+  heat.addEventListener("mousemove", (e) => {
+    const rect = heat.getBoundingClientRect();
+    const pad = heat._hmPad;
+    if (!pad) return;
+    const fx = (e.clientX - rect.left - pad.left) / (rect.width - pad.left - pad.right);
+    const fy = (e.clientY - rect.top - pad.top) / (rect.height - pad.top - pad.bottom);
+    const di = Math.floor(fx * SONDE.days.length);
+    const zi = Math.floor(fy * SONDE.depths.length);
+    if (di < 0 || di >= SONDE.days.length || zi < 0 || zi >= SONDE.depths.length) {
+      hideTooltip(); return;
+    }
+    const v = SONDE.params[SN.param].grid[zi][di];
+    showTooltip(e, `<b>${SONDE.days[di]}</b> · ${SONDE.depths[zi]} m<br>` +
+      `${SONDE.params[SN.param].label}: <b>${fmt(v)}</b><br>` +
+      `cast depth that day: ${fmt(SONDE.bands.max_depth[di])} m`);
+  });
+  heat.addEventListener("mouseleave", hideTooltip);
+
+  const strat = $("sonde-strat");
+  strat.addEventListener("mousemove", (e) => {
+    const i = indexAtEvent(strat, e);
+    $("strat-readout").innerHTML = `${SONDE.days[i]} · surface ` +
+      `${fmt(SONDE.bands.surface_temp[i])} °C, bottom ${fmt(SONDE.bands.bottom_temp[i])} °C, ` +
+      `difference <b>${fmt(SONDE.bands.strat[i])} °C</b>`;
+  });
+  strat.addEventListener("mouseleave", () => { $("strat-readout").textContent = ""; });
+  drawSonde();
+}
+
+function drawSonde() {
+  const param = SONDE.params[SN.param];
+  const log = SONDE_LOG.has(SN.param);
+  const [lo, hi] = percentileDomain(param.grid, log);
+  $("sonde-title").textContent =
+    `${param.label} — one column per day, Apr 7 to Aug 19 2026; depth increases downward`;
+  $("sonde-scale-note").textContent = (log ? "log scale, " : "") +
+    "colour clipped to the 2nd–98th percentile";
+
+  const canvas = $("sonde-heatmap");
+  const [g, w, h] = setupCanvas(canvas);
+  const pad = { top: 8, bottom: 18, left: 34, right: 8 };
+  canvas._hmPad = pad;
+  const iw = w - pad.left - pad.right, ih = h - pad.top - pad.bottom;
+  const cw = iw / SONDE.days.length, ch = ih / SONDE.depths.length;
+  g.fillStyle = "#10151a"; g.fillRect(pad.left, pad.top, iw, ih);
+  for (let zi = 0; zi < SONDE.depths.length; zi++) {
+    const row = param.grid[zi];
+    for (let di = 0; di < SONDE.days.length; di++) {
+      let v = row[di];
+      if (v === null) continue;
+      if (log) v = v > 0 ? Math.log10(v) : lo;
+      g.fillStyle = rampColor((v - lo) / (hi - lo));
+      g.fillRect(pad.left + di * cw, pad.top + zi * ch, cw + 0.6, ch + 0.6);
+    }
+  }
+  g.fillStyle = "rgba(184,192,200,0.95)"; g.font = "10px sans-serif";
+  g.textAlign = "right";
+  for (const z of [0, 10, 20, 30, 40])
+    if (z < SONDE.depths.length)
+      g.fillText(z + " m", pad.left - 4, pad.top + z * ch + 8);
+  g.textAlign = "center";
+  for (const t of monthTicks((i) => SONDE.days[i], SONDE.days.length))
+    g.fillText(t.text, pad.left + t.i * cw, h - 4);
+  for (const vl of sondeStormLines()) {
+    const px = pad.left + (vl.i + 0.5) * cw;
+    g.strokeStyle = "rgba(255,255,255,0.75)"; g.setLineDash([4, 3]);
+    g.beginPath(); g.moveTo(px, pad.top); g.lineTo(px, pad.top + ih); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = "rgba(255,255,255,0.9)"; g.textAlign = "left";
+    g.fillText(vl.label, px + 3, pad.top + 10);
+  }
+
+  const [cg, cbw, cbh] = setupCanvas($("sonde-colorbar"));
+  for (let px = 0; px < cbw; px++) {
+    cg.fillStyle = rampColor(px / cbw);
+    cg.fillRect(px, 0, 1, cbh);
+  }
+  cg.fillStyle = "#10151a";
+  cg.font = "10px sans-serif"; cg.textAlign = "left";
+  const showLo = log ? Math.pow(10, lo) : lo, showHi = log ? Math.pow(10, hi) : hi;
+  cg.fillText(fmt(showLo), 3, cbh - 3);
+  cg.textAlign = "right"; cg.fillText(fmt(showHi), cbw - 3, cbh - 3);
+
+  drawChart($("sonde-strat"), {
+    n: SONDE.days.length,
+    ticks: monthTicks((i) => SONDE.days[i], SONDE.days.length),
+    cursor: -1, zeroL: true,
+    series: [{ at: (i) => SONDE.bands.strat[i], color: PAL.temp }],
+    vlines: sondeStormLines().map((v) => ({ i: v.i })),
+  });
+}
+REDRAW.sonde = () => SONDE && drawSonde();
+
+/* --------------------------------------------------------- view 3: storms */
+
+const ST = { selected: "ref", cursor: -1, ref: null };
+
+function initStorms() {
+  const chips = $("storm-chips");
+  const buttons = [`<button data-e="ref" class="on">Aug 14–15 2026 · 15-minute record</button>`]
+    .concat(STORMS.events.map((ev, i) =>
+      `<button data-e="${i}">${ev.date} · ${fmt(ev.prcp_in)}" rain</button>`));
+  chips.innerHTML = buttons.join("");
+  chips.querySelectorAll("button").forEach((b) => b.onclick = () => {
+    ST.selected = b.dataset.e;
+    chips.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    drawStorm();
+  });
+  drawStorm();
+}
+
+function parseSeriesFile(file, param) {
+  const ts = file.value.timeSeries.find((t) =>
+    t.variable.variableCode[0].value === param);
+  return ts.values[0].value
+    .map((r) => ({ t: r.dateTime, v: parseFloat(r.value) }))
+    .filter((r) => isFinite(r.v));
+}
+
+async function loadRefStorm() {
+  if (ST.ref) return ST.ref;
+  const [flowFile, turbFile] = await Promise.all([
+    fetchJson("../../strontia-brief/series/06701900-discharge-aug14-15.json"),
+    fetchJson("../../strontia-brief/series/06707525-turbidity-conductance-aug14-15.json"),
+  ]);
+  ST.ref = {
+    flow: parseSeriesFile(flowFile, "00060"),
+    turb: parseSeriesFile(turbFile, "63680"),
+    cond: parseSeriesFile(turbFile, "00095"),
+  };
+  return ST.ref;
+}
+
+function stormPanelHtml(rows, caption) {
+  return rows.map((r) => `
+    <div class="chart-label"><span>${r.label}</span></div>
+    <canvas class="chart" id="${r.id}" style="height:110px"></canvas>`).join("") +
+    `<p class="note" id="storm-caption">${caption}</p>`;
+}
+
+async function drawStorm() {
+  const host = $("storm-panel");
+  if (ST.selected === "ref") {
+    host.innerHTML = `<p class="note">Loading the committed 15-minute record…</p>`;
+    let ref;
+    try { ref = await loadRefStorm(); }
+    catch (err) {
+      host.innerHTML = `<p class="err">Could not load the storm series (${err.message}).</p>`;
+      return;
+    }
+    const turbPeak = ref.turb.reduce((b, d, i) => d.v > ref.turb[b].v ? i : b, 0);
+    host.innerHTML = stormPanelHtml([
+      { id: "st-flow", label: "Flow at the gage near Trumbull, cubic ft/s (USGS 06701900)" },
+      { id: "st-turb", label: "Turbidity at the sentinel gage above Strontia, FNU (USGS 06707525)" },
+      { id: "st-cond", label: "Specific conductance at the sentinel gage, µS/cm — note the 1:00 PM sensor blip to 38, hours before the storm" },
+    ], `${STORMS.reference_storm.note} The lab's TOC response sits days past
+        the end of this 48-hour record — exactly the window a soft sensor is
+        for. This is the same event the 3D map replays with radar.`);
+    const mk = (series) => ({
+      n: series.length,
+      ticks: [], cursor: -1, zeroL: true,
+      series: [{ at: (i) => series[i].v, color: PAL.flow }],
+    });
+    const hourTicks = (series) => {
+      const t = [];
+      for (let i = 1; i < series.length; i++) {
+        const a = new Date(series[i - 1].t), b = new Date(series[i].t);
+        if (b.getHours() !== a.getHours() && b.getHours() % 6 === 0)
+          t.push({ i, text: b.toLocaleTimeString("en-US",
+            { timeZone: "America/Denver", hour: "numeric" }) });
+      }
+      return t;
+    };
+    const flowO = mk(ref.flow); flowO.ticks = hourTicks(ref.flow);
+    drawChart($("st-flow"), flowO);
+    const turbO = mk(ref.turb); turbO.ticks = hourTicks(ref.turb);
+    turbO.series[0].color = PAL.turb;
+    turbO.markers = [{ i: turbPeak, v: ref.turb[turbPeak].v, color: PAL.accent,
+      label: Math.round(ref.turb[turbPeak].v) + " FNU" }];
+    drawChart($("st-turb"), turbO);
+    const condO = mk(ref.cond); condO.ticks = hourTicks(ref.cond);
+    condO.series[0].color = PAL.cond;
+    drawChart($("st-cond"), condO);
+    return;
+  }
+
+  const ev = STORMS.events[Number(ST.selected)];
+  const i0 = DS.dates.indexOf(ev.date);
+  const lo = Math.max(0, i0 - 7), hi = Math.min(DS.dates.length - 1, i0 + 14);
+  const n = hi - lo + 1, evI = i0 - lo;
+  host.innerHTML = stormPanelHtml([
+    { id: "st-prcp", label: "Rain at the NOAA station, inches (bars)" },
+    { id: "st-flow", label: "River flow at Waterton, cubic ft/s" },
+    { id: "st-turb", label: "Turbidity above Strontia, FNU" },
+    { id: "st-plant", label: "At the plant — TOC, mg/L (green, left) and alkalinity, mg/L (blue, right)" },
+  ], `Rain fell on <b>${ev.date}</b> (${fmt(ev.prcp_in)}").` +
+     (ev.flow_peak_offset_days !== null ? ` The local flow peak came <b>${ev.flow_peak_offset_days === 0 ? "the same day" : "+" + ev.flow_peak_offset_days + " day(s)"}</b> later.` : "") +
+     (ev.turb_peak_offset_days !== null ? ` Turbidity peaked <b>${ev.turb_peak_offset_days === 0 ? "the same day" : "+" + ev.turb_peak_offset_days + " day(s)"}</b> after the rain.` : " (No turbidity record in this window: the winter sensor gap.)") +
+     ` Watch the plant panel in the days after day 0: that multi-day drift is
+     the warning window the models aim at — and single-day offsets vary
+     event to event, which is why no single lag number should be leaned on.`);
+  const ticks = monthTicks((i) => DS.dates[lo + i], n)
+    .concat([{ i: evI, text: "day 0" }]);
+  const vlines = [{ i: evI, label: "rain" }];
+  const at = (key) => (i) => DS.series[key][lo + i];
+  drawChart($("st-prcp"), { n, ticks, vlines, zeroL: true,
+    series: [{ at: at("prcp"), color: PAL.prcp, type: "bars" }] });
+  const flowMarkers = ev.flow_peak_offset_days === null ? [] :
+    [{ i: evI + ev.flow_peak_offset_days,
+       v: DS.series.flow[i0 + ev.flow_peak_offset_days],
+       color: PAL.accent, label: "peak" }];
+  drawChart($("st-flow"), { n, ticks, vlines, zeroL: true, markers: flowMarkers,
+    series: [{ at: at("flow"), color: PAL.flow }] });
+  const turbMarkers = ev.turb_peak_offset_days === null ? [] :
+    [{ i: evI + ev.turb_peak_offset_days,
+       v: DS.series.turb[i0 + ev.turb_peak_offset_days],
+       color: PAL.accent, label: "peak" }];
+  drawChart($("st-turb"), { n, ticks, vlines, zeroL: true, markers: turbMarkers,
+    series: [{ at: at("turb"), color: PAL.turb }] });
+  drawChart($("st-plant"), { n, ticks, vlines,
+    series: [{ at: at("toc"), color: PAL.toc },
+             { at: at("alk"), color: PAL.alk, axis: "R" }] });
+}
+REDRAW.storms = () => STORMS && drawStorm();
+
+/* -------------------------------------------------------- view 4: seasons */
+
+const SE = { wy: "2026" };
+const WY_TICKS = [[0, "Oct"], [61, "Dec"], [123, "Feb"], [182, "Apr"],
+  [243, "Jun"], [304, "Aug"]].map(([i, text]) => ({ i, text }));
+const WY_COLORS = { "2022": "#9aa5b1", "2023": "#6fc3ff", "2024": "#c792ea",
+  "2025": "#e5c07b", "2026": "#ff8fa3" };
+
+const SEASON_PANELS = [
+  { key: "swe_hoosier", label: "Snow water equivalent at Hoosier Pass, inches", zero: true },
+  { key: "flow", label: "South Platte flow at Waterton, cubic ft/s", zero: true },
+  { key: "toc", label: "TOC at the Foothills influent, mg/L (no Jan–Mar record)" },
+  { key: "alk", label: "Alkalinity at the Foothills influent, mg/L (no Jan–Mar record)" },
+];
+
+function initSeasons() {
+  const chips = $("season-chips");
+  const years = Object.keys(WY.series.swe_hoosier.years);
+  chips.innerHTML = years.map((y) =>
+    `<button data-y="${y}" class="${y === SE.wy ? "on" : ""}" style="border-color:${WY_COLORS[y]}">WY ${y}</button>`).join("");
+  chips.querySelectorAll("button").forEach((b) => b.onclick = () => {
+    SE.wy = b.dataset.y;
+    chips.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    drawSeasons();
+  });
+  $("season-panels").innerHTML = SEASON_PANELS.map((p) => `
+    <div class="chart-label"><span>${p.label}</span><span class="readout" id="se-r-${p.key}"></span></div>
+    <canvas class="chart" id="se-${p.key}" style="height:120px"></canvas>`).join("") +
+    `<div class="legend">` +
+    Object.entries(WY_COLORS).map(([y, c]) =>
+      `<span class="key"><span class="swatch" style="background:${c}"></span>WY ${y}</span>`).join("") +
+    `<span class="key"><span class="swatch" style="background:#fff;opacity:.75"></span>median (dashed)</span></div>
+    <p class="note">A water year runs Oct 1–Sep 30. WY 2023 was the wet year:
+    watch its snowpack peak late and high, and TOC follow the big runoff.
+    Medians need at least two years with data on that calendar day.</p>`;
+  drawSeasons();
+}
+
+function drawSeasons() {
+  for (const p of SEASON_PANELS) {
+    const fold = WY.series[p.key];
+    const series = [];
+    for (const [y, trace] of Object.entries(fold.years))
+      if (y !== SE.wy)
+        series.push({ at: (i) => trace[i], color: "rgba(255,255,255,0.16)", width: 1 });
+    series.push({ at: (i) => fold.median[i], color: "rgba(255,255,255,0.75)",
+      dash: [4, 3], width: 1.4 });
+    const sel = fold.years[SE.wy];
+    if (sel) series.push({ at: (i) => sel[i], color: WY_COLORS[SE.wy], width: 2.2 });
+    const canvas = $("se-" + p.key);
+    drawChart(canvas, { n: 366, ticks: WY_TICKS, zeroL: p.zero, series });
+    canvas.onmousemove = (e) => {
+      const i = indexAtEvent(canvas, e);
+      const v = sel ? sel[i] : null, m = WY.series[p.key].median[i];
+      $("se-r-" + p.key).innerHTML =
+        `day ${i}: WY ${SE.wy} <b style="color:${WY_COLORS[SE.wy]}">${fmt(v)}</b> · median ${fmt(m)}`;
+    };
+    canvas.onmouseleave = () => { $("se-r-" + p.key).textContent = ""; };
+  }
+}
+REDRAW.seasons = () => WY && drawSeasons();
+
+/* --------------------------------------------------------- view 5: basins */
+
+const BA = { wy: "2026" };
+
+function wyDate(wy, doy) {
+  const d = new Date(Date.UTC(Number(wy) - 1, 9, 1));
+  d.setUTCDate(d.getUTCDate() + doy);
+  return d.toISOString().slice(0, 10);
+}
+
+function initBasins() {
+  const chips = $("basin-wy-chips");
+  chips.innerHTML = ["2022", "2023", "2024", "2025", "2026"].map((y) =>
+    `<button data-y="${y}" class="${y === BA.wy ? "on" : ""}">WY ${y}</button>`).join("");
+  chips.querySelectorAll("button").forEach((b) => b.onclick = () => {
+    BA.wy = b.dataset.y;
+    chips.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+    drawBasins();
+  });
+  $("basin-cards").innerHTML = BASINS.basins.map((b) => `
+    <div class="card basin-card" id="bc-${b.id}">
+      <h3>${b.name}</h3>
+      <div class="meta">
+        <span class="tag ${b.slope}">${b.slope === "east" ? "East slope" : "West slope"}</span>
+        Outlet: ${b.outlet_gage.name}
+        ${b.nested_in ? " · nested inside the Strontia basin" : ""}
+      </div>
+      <p style="font-size:13.5px;color:var(--muted);margin:6px 0">${b.blurb}</p>
+      <p class="note"><b>Delivery:</b> ${b.delivery}</p>
+      <p class="note"><b>Snow stations (${b.snotel_members.length}):</b>
+        ${b.snotel_members.map((m) => m.name).join(", ") || "none inside the polygon"}</p>
+      <div class="chart-label"><span>Basin-average SWE, inches — WY <span class="bc-wy"></span> (bold) vs all-years median (dashed)</span></div>
+      <canvas class="chart" id="bc-swe-${b.id}" style="height:100px"></canvas>
+      <div class="note" id="bc-melt-${b.id}"></div>
+      <div class="chart-label"><span id="bc-flow-label-${b.id}">Outlet flow, cubic ft/s</span></div>
+      <canvas class="chart" id="bc-flow-${b.id}" style="height:100px"></canvas>
+      <div class="note" id="bc-flow-note-${b.id}"></div>
+    </div>`).join("");
+  drawBasins();
+}
+
+function drawBasins() {
+  document.querySelectorAll(".bc-wy").forEach((el) => el.textContent = BA.wy);
+  for (const b of BASINS.basins) {
+    const swe = b.swe.years[BA.wy];
+    const markers = [];
+    const mm = b.melt_markers[BA.wy];
+    if (mm && swe) {
+      markers.push({ i: mm.peak_doy, v: swe[mm.peak_doy], color: PAL.accent,
+        label: `peak ${fmt(mm.peak_swe)}"` });
+      if (mm.melt_out_doy !== null && swe[mm.melt_out_doy] !== null)
+        markers.push({ i: mm.melt_out_doy, v: swe[mm.melt_out_doy],
+          color: PAL.turb, label: "melt-out" });
+    }
+    drawChart($("bc-swe-" + b.id), {
+      n: 366, ticks: WY_TICKS, zeroL: true, markers,
+      series: [
+        { at: (i) => b.swe.median[i], color: "rgba(255,255,255,0.6)", dash: [4, 3], width: 1.2 },
+        { at: (i) => swe ? swe[i] : null, color: PAL.swe, width: 2 },
+      ],
+    });
+    $("bc-melt-" + b.id).innerHTML = mm
+      ? `WY ${BA.wy}: snowpack peaked <b>${fmt(mm.peak_swe)}"</b> on ${wyDate(BA.wy, mm.peak_doy)},` +
+        ` melt began ~${wyDate(BA.wy, mm.onset_doy)}` +
+        (mm.melt_out_doy !== null ? `, melted out ${wyDate(BA.wy, mm.melt_out_doy)}.` : ", no melt-out in record.")
+      : `No SWE record for WY ${BA.wy}.`;
+
+    const flowCanvas = $("bc-flow-" + b.id);
+    const note = $("bc-flow-note-" + b.id);
+    let fold = null, src = "";
+    if (b.committed_flow) {
+      fold = WY.series[b.committed_flow];
+      src = "committed DWR record (PLASPLCO at Waterton, just below this basin's outlet)";
+    } else if (BASIN_FLOWS && BASIN_FLOWS.gages[b.outlet_gage.site]) {
+      fold = BASIN_FLOWS.gages[b.outlet_gage.site];
+      src = `USGS daily values, fetched ${BASIN_FLOWS.fetched}`;
+    }
+    if (fold) {
+      const trace = fold.years[BA.wy];
+      drawChart(flowCanvas, {
+        n: 366, ticks: WY_TICKS, zeroL: true,
+        series: [
+          { at: (i) => fold.median[i], color: "rgba(255,255,255,0.6)", dash: [4, 3], width: 1.2 },
+          { at: (i) => trace ? trace[i] : null, color: PAL.flow, width: 2 },
+        ],
+      });
+      note.textContent = trace
+        ? `WY ${BA.wy} (blue) vs median (dashed) · ${src}.`
+        : `No WY ${BA.wy} record at this gage · ${src}.`;
+      flowCanvas.style.display = "block";
+    } else {
+      flowCanvas.style.display = "none";
+      note.innerHTML = `Outlet hydrograph not committed yet: run
+        <code>python3 fetch_basin_flows.py</code> (needs network access to the
+        USGS daily-values API) to add it. ${BASINS.flow_note ? "" : ""}`;
+    }
+  }
+}
+REDRAW.basins = () => BASINS && drawBasins();
+
+/* ------------------------------------------------------------------- boot */
+
+async function main() {
+  try {
+    [DS, SONDE, WY, STORMS, BASINS] = await Promise.all([
+      fetchJson("viz-data/daily-series.json"),
+      fetchJson("viz-data/sonde.json"),
+      fetchJson("viz-data/water-years.json"),
+      fetchJson("viz-data/storms.json"),
+      fetchJson("viz-data/basins.json"),
+    ]);
+  } catch (err) {
+    document.querySelector("main").innerHTML =
+      `<p class="err">Could not load the generated data (${err.message}).
+       Serve this page from the repository root with
+       <code>python3 serve.py</code>, and if viz-data/ is empty run
+       <code>python3 teams/explainable-viz/build_viz_data.py</code> first.</p>`;
+    return;
+  }
+  try { BASIN_FLOWS = await fetchJson("viz-data/basin-flows.json"); }
+  catch { BASIN_FLOWS = null; }
+
+  initTimeline();
+  initSonde();
+  initStorms();
+  initSeasons();
+  initBasins();
+
+  const hash = location.hash.replace("#", "");
+  if (["timeline", "sonde", "storms", "seasons", "basins"].includes(hash))
+    selectView(hash);
+}
+
+main();
+</script>
+</body>
+</html>
