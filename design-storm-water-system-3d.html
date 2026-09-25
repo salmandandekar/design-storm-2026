@@ -107,6 +107,23 @@
     padding: 4px 8px; border-radius: 6px; border: 1px solid var(--panel-line);
     transform: translate(12px, -50%); white-space: nowrap;
   }
+  #replay-extras { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 6px; }
+  #replay-extras:empty { display: none; }
+  .mini-chip {
+    font: inherit; font-size: 11.5px; cursor: pointer;
+    background: rgba(255,255,255,0.07); color: var(--panel-ink-2);
+    border: 1px solid var(--panel-line); border-radius: 999px; padding: 2px 9px;
+  }
+  .mini-chip.on { background: rgba(57,135,229,0.35); color: var(--panel-ink); border-color: #3987e5; }
+  .member { background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+    color: #6fc3ff; text-decoration: underline; text-decoration-style: dotted; }
+  #depth-marker {
+    background: var(--panel-bg); border: 1px solid var(--panel-line); border-radius: 8px;
+    padding: 6px 8px; color: var(--panel-ink); font-size: 11px; text-align: center;
+    pointer-events: none; width: 92px;
+  }
+  #depth-marker canvas { width: 26px; height: 110px; display: block; margin: 4px auto; }
+  #depth-marker .state { font-weight: 600; }
   @media (max-width: 640px) {
     #panel { width: calc(100% - 24px); max-height: 55%; }
   }
@@ -131,8 +148,10 @@
   <div id="detail"></div>
   <button class="action" id="tour-start">&#9992; Fly the water&rsquo;s path</button>
   <button class="action quiet" id="replay-start">&#9928; Replay the Aug 14-15 storm</button>
+  <button class="action quiet" id="season-start" style="display:none">&#10052; Replay a water year</button>
   <div id="replaybar">
     <div class="time" id="replay-time"></div>
+    <div id="replay-extras"></div>
     <input type="range" id="replay-slider" min="0" max="0" value="0">
     <div class="row">
       <button class="action" id="replay-play">Pause</button>
@@ -153,6 +172,7 @@
     Storm radar: NEXRAD archive via Iowa State Mesonet &middot;
     Foothills influent lab data &copy; 2026 <a href="https://www.denverwater.org/about-us/how-we-operate/public-records" target="_blank" rel="noopener">Denver Water</a>,
     provisional, provided as is, no warranty of any kind.
+    Sub-basin behaviour &amp; sonde bundles: <a href="teams/explainable-viz/" target="_blank" rel="noopener">explainable-viz</a>.
     Built in the <a href="https://github.com/paulrayner/design-storm-2026" target="_blank" rel="noopener">Design Storm workspace</a>.
     Full <a href="data-terms.html" target="_blank" rel="noopener">data terms</a>.
   </div>
@@ -248,7 +268,8 @@ async function fetchJson(url) {
 }
 
 async function loadEverything() {
-  const [system, basinSP, basinBlue, basinFraser, basinWF, riversMain, riversDown] =
+  const [system, basinSP, basinBlue, basinFraser, basinWF, riversMain, riversDown,
+         basinTrumbull, basinMeta] =
     await Promise.all([
       fetchJson("water-system-3d/system.json"),
       fetchJson("strontia-brief/basins/south-platte-above-strontia-06707525.json"),
@@ -257,14 +278,35 @@ async function loadEverything() {
       fetchJson("strontia-brief/basins/williams-fork-parshall-09037500.json"),
       fetchJson("strontia-brief/basins/mainstem-flowlines-06707525.json"),
       fetchJson("strontia-brief/basins/downstream-mainstem-06707525.json"),
+      fetchJson("strontia-brief/basins/south-platte-above-trumbull-06701900.json").catch(() => null),
+      fetchJson("teams/explainable-viz/viz-data/basins.json").catch(() => null),
     ]);
   state.points = system.points;
   state.lines = system.lines;
   system.points.forEach((p) => { state.byId[p.id] = p; });
   system.lines.forEach((l) => { state.byId[l.id] = l; });
+  state.snotelByTriplet = {};
+  system.points.forEach((p) => {
+    if (p.chart && p.chart.triplet) state.snotelByTriplet[p.chart.triplet] = p.id;
+  });
+  state.basinMeta = basinMeta;
+  state.basinFeatureId = {};
+  state.basinGeo = {};
 
+  const BASIN_SOURCES = [
+    ["south-platte-above-strontia", basinSP],
+    ["blue-river-below-dillon", basinBlue],
+    ["fraser-below-moffat", basinFraser],
+    ["williams-fork-parshall", basinWF],
+    ["south-platte-above-trumbull", basinTrumbull],
+  ].filter(([, file]) => file);
   const basins = { type: "FeatureCollection",
-    features: [basinSP, basinBlue, basinFraser, basinWF].flatMap((b) => b.features) };
+    features: BASIN_SOURCES.flatMap(([id, file], n) => {
+      state.basinFeatureId[id] = n;
+      state.basinGeo[id] = file.features[0];
+      return file.features.map((f) => ({
+        ...f, id: n, properties: { ...f.properties, basin: id } }));
+    }) };
   const rivers = { type: "FeatureCollection",
     features: riversMain.features.concat(riversDown.features) };
 
@@ -273,6 +315,9 @@ async function loadEverything() {
   map.addSource("tunnels", { type: "geojson", data: lineFeatures(system.lines) });
   map.addSource("points", { type: "geojson", data: pointFeatures() });
 
+  map.addLayer({ id: "basin-fill", type: "fill", source: "basins",
+    paint: { "fill-color": ["coalesce", ["feature-state", "fill"], "#9db8d8"],
+             "fill-opacity": ["coalesce", ["feature-state", "op"], 0.06] } });
   map.addLayer({ id: "basin-line", type: "line", source: "basins",
     paint: { "line-color": "rgba(255,255,255,0.55)", "line-width": 1.4, "line-dasharray": [1, 2] } });
   map.addLayer({ id: "river-line", type: "line", source: "rivers",
@@ -300,10 +345,31 @@ async function loadEverything() {
   wireInteraction();
   buildLegend();
   showIntro();
+  if (state.basinMeta) document.getElementById("season-start").style.display = "block";
 }
 
 function wireInteraction() {
   const tip = document.getElementById("tip");
+  if (state.basinMeta) {
+    map.on("mousemove", "basin-fill", (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["points"] }).length) return;
+      const b = basinMetaById(e.features[0].properties.basin);
+      if (!b) return;
+      map.getCanvas().style.cursor = "pointer";
+      tip.textContent = b.name + " basin — click for its behaviour";
+      tip.style.display = "block";
+      tip.style.left = e.point.x + "px";
+      tip.style.top = e.point.y + "px";
+    });
+    map.on("mouseleave", "basin-fill", () => {
+      map.getCanvas().style.cursor = "";
+      tip.style.display = "none";
+    });
+    map.on("click", "basin-fill", (e) => {
+      if (map.queryRenderedFeatures(e.point, { layers: ["points", "tunnel-line"] }).length) return;
+      showBasinDetail(e.features[0].properties.basin);
+    });
+  }
   map.on("mousemove", "points", (e) => {
     map.getCanvas().style.cursor = "pointer";
     tip.textContent = e.features[0].properties.name;
@@ -360,12 +426,22 @@ const GLOSSARY = {
   "pH": "How acidic or alkaline the water is. Treatment chemistry is sensitive to it, and it shifts with what the watershed sends down.",
   "dissolved oxygen": "Oxygen held in the water. Tracks temperature, algae, and mixing; another cheap continuous signal about the river's state.",
   "organic carbon": "Dissolved dead plant material: leaves, soil, forest litter washed in by rain and snowmelt. Harmless itself, but it reacts with the chlorine used for disinfection, so the plant must strip it first.",
+  "stratification": "In summer a reservoir separates into a warm, light surface layer floating on cold, dense deep water. The layers barely mix, so what the intake pipe drinks depends on the depth it sits at.",
+  "turnover": "When the surface cools in autumn the layers reach the same density and the whole reservoir mixes top to bottom, stirring up whatever the deep water was holding.",
+  "chlorophyll": "The green pigment of algae. The sonde reads it as a proxy for how much algae is growing, and algae is organic carbon in the making.",
+  "phycocyanin": "The pigment of blue-green algae (cyanobacteria), the kind that can produce toxins. A rise flags a bloom worth checking on.",
+  "melt onset": "The day the snowpack starts shrinking for good. From here the basin's stored winter is being spent as streamflow.",
+  "melt-out": "The day the snow pillow reads zero: the basin's snow bank is empty and the river must live on rain and groundwater until autumn.",
+  "median": "The middle year: half the record sits above this line, half below. A fair \"normal\" that one freak year cannot drag around.",
+  "sub-basin": "One tributary's share of the watershed: every ridge and valley that drains to a single outlet gage. The map's dashed outlines are official USGS boundaries.",
 };
 
 const CAVEATS = {
   snotel: "A snow pillow weighs whatever sits on it. Wind scours snow off or drifts extra on, an ice crust can bridge over the pillow so new snow never presses down, and a thawing sensor can spike absurdly for a day (this station's record shows one). Review catches most of it, later.",
   gage: "Turbidity and conductance sensors foul with algae and silt. Ice, debris, or a shifted channel skew stage-based flow readings. And a bad 15-minute value carries only the routine provisional flag, the same one every fresh reading gets. The August 14 conductance blip is exhibit A.",
   reservoir: "Storage is not weighed directly: a sensor reads the water surface elevation and a rating table converts it to volume. The raw state feed occasionally contains impossible values (single days claiming millions of acre-feet); this map filters the worst of them.",
+  basin: "A basin average built from one to four snow pillows is a thin sample of hundreds of square miles; wind, aspect, and elevation make real snowpack much patchier than one number suggests. One member station (Michigan Creek) had a known bad stretch in May 2026 that is masked here, and the outlet-gage flows carry the same provisional flag as every fresh USGS reading.",
+  sonde: "One instrument, one spot near the dam, one partial season (Apr-Aug 2026). It cannot say how the far end of the reservoir behaves, and single-profile quirks (a passing boat wake, a snagged line) are indistinguishable from real structure. All of it is provisional.",
 };
 
 function annotateGlossary(element) {
@@ -381,6 +457,13 @@ function annotateGlossary(element) {
 }
 
 document.getElementById("panel").addEventListener("click", (e) => {
+  const member = e.target.closest("[data-station]");
+  if (member && state.byId[member.dataset.station]) {
+    showDetail(state.byId[member.dataset.station]);
+    return;
+  }
+  const basinLink = e.target.closest("[data-basin]");
+  if (basinLink) { showBasinDetail(basinLink.dataset.basin); return; }
   const term = e.target.closest(".gloss");
   if (!term) return;
   const next = term.nextElementSibling;
@@ -400,7 +483,13 @@ function showIntro() {
     <p class="note">White diamonds weigh the snowpack. Orange triangles measure
     the rivers. Blue circles store the water. Aqua squares treat it. The dashed
     yellow lines are the tunnels that defy the Continental Divide.
-    Dotted-underlined terms explain themselves when clicked.</p>`;
+    Dotted-underlined terms explain themselves when clicked.</p>
+    ${state.basinMeta ? `<p class="note">The dashed outlines are the five
+    sub-basins; click inside one to see how it behaves: its snow stations, melt
+    dates, and the route its water takes to Denver. Or replay a whole water
+    year below. The companion
+    <a href="teams/explainable-viz/" target="_blank" rel="noopener">2D data
+    suite</a> holds the full charts behind these views.</p>` : ""}`;
   annotateGlossary();
 }
 
@@ -604,7 +693,7 @@ function drawOverlay(canvas, history, currentSeries, fullDomain = false) {
   const traces = Object.values(history.years);
   const anchorValues = (fullDomain
     ? Object.values(history.years).flat()
-    : [history.median, history.years[String(history.worst.wy)] || []].flat())
+    : [history.median, history.worst ? history.years[String(history.worst.wy)] || [] : []].flat())
     .filter((v) => v !== null)
     .concat(currentSeries.map((d) => d.v));
   const min = Math.min(...anchorValues), max = Math.max(...anchorValues);
@@ -630,7 +719,7 @@ function drawOverlay(canvas, history, currentSeries, fullDomain = false) {
 
   g.lineWidth = 1; g.strokeStyle = "rgba(255,255,255,0.16)";
   for (const trace of traces) polyline(trace);
-  const worst = history.years[String(history.worst.wy)];
+  const worst = history.worst && history.years[String(history.worst.wy)];
   if (worst) { g.strokeStyle = "rgba(255,209,102,0.85)"; g.lineWidth = 1.4; polyline(worst); }
   g.strokeStyle = "rgba(255,255,255,0.75)"; g.lineWidth = 1.4; g.setLineDash([4, 3]);
   polyline(history.median);
@@ -717,8 +806,14 @@ const TOUR = [
     text: "At Grant, tunnel water pours into the North Fork. This gage watches the river swell with borrowed Blue River water." },
   { id: "gage-06707525", zoom: 11.2, pitch: 60,
     text: "Everything converges here: the gage above Strontia Springs Reservoir. It reads turbidity, temperature, and chemistry every 15 minutes. 80% of Denver's supply passes this point." },
+  { view: { center: [-105.75, 39.5], zoom: 7.7, pitch: 48, bearing: -10 },
+    title: "Five basins, two personalities",
+    text: "Each dashed outline is a sub-basin: the land that drains to one gage. East of the divide, the South Platte basins melt out weeks early and flow to Denver by gravity; west of it, the Blue, Fraser, and Williams Fork hold snow longer and surrender their water only through tunnels. The small Trumbull basin even nests inside the big Strontia one. Click any outline after the tour to see its behaviour." },
   { id: "dam-strontia", zoom: 11.8, pitch: 62, bearing: -30,
     text: "Strontia Springs Dam, in Waterton Canyon. From here water is piped to the Foothills and Marston treatment plants. Aurora drinks from this reservoir too." },
+  { id: "dam-strontia", zoom: 12.2, pitch: 65, bearing: -50,
+    title: "Inside the reservoir",
+    text: "Since April 2026 a sonde has profiled this reservoir top to bottom: temperature, dissolved oxygen, algae pigments. In summer it shows stratification, a warm lid over cold depths, which decides what the intake drinks. Replay a water year to watch the column form and fade day by day, or open the 2D suite for the full depth-time picture. One instrument, one season: treat it as a first look, not a rule." },
   { id: "plant-foothills", zoom: 11.4, pitch: 55,
     text: "The Foothills plant treats up to 280 million gallons a day, then sends it into the city's pipes. Mountain snow, now tap water." },
   { id: "moffat", center: [-105.55, 39.87], zoom: 9.4, pitch: 55, bearing: -20,
@@ -888,8 +983,11 @@ function replayPlay() {
 }
 
 async function replayStart() {
+  state.replayMode = "storm";
   document.getElementById("tour-start").style.display = "none";
   document.getElementById("replay-start").style.display = "none";
+  document.getElementById("season-start").style.display = "none";
+  document.getElementById("replay-extras").innerHTML = "";
   document.getElementById("detail").innerHTML = "";
   document.getElementById("replaybar").style.display = "block";
   document.getElementById("replay-caption").textContent = "Loading the storm record…";
@@ -912,6 +1010,7 @@ async function replayStart() {
 }
 
 function replayExit() {
+  state.replayMode = null;
   replayPause();
   removeReplayLabels();
   if (map.getLayer("radar")) map.removeLayer("radar");
@@ -919,14 +1018,478 @@ function replayExit() {
   document.getElementById("replaybar").style.display = "none";
   document.getElementById("tour-start").style.display = "block";
   document.getElementById("replay-start").style.display = "block";
+  if (state.basinMeta) document.getElementById("season-start").style.display = "block";
   showIntro();
   map.flyTo({ ...HOME, speed: 0.75 });
 }
 
 document.getElementById("replay-start").onclick = replayStart;
-document.getElementById("replay-exit").onclick = replayExit;
-document.getElementById("replay-play").onclick = () => replayPlaying() ? replayPause() : replayPlay();
-document.getElementById("replay-slider").oninput = (e) => replaySet(parseInt(e.target.value, 10));
+document.getElementById("replay-exit").onclick = () =>
+  state.replayMode === "season" ? seasonExit() : replayExit();
+document.getElementById("replay-play").onclick = () => {
+  if (state.replayMode === "season") return seasonPlaying() ? seasonPause() : seasonPlay();
+  replayPlaying() ? replayPause() : replayPlay();
+};
+document.getElementById("replay-slider").oninput = (e) => {
+  const v = parseInt(e.target.value, 10);
+  state.replayMode === "season" ? seasonSet(v) : replaySet(v);
+};
+
+/* ------------------------------------------------------- sub-basins & seasons */
+
+const VIZ_DATA = "teams/explainable-viz/viz-data/";
+
+function basinMetaById(id) {
+  return state.basinMeta && state.basinMeta.basins.find((b) => b.id === id);
+}
+
+async function loadWaterYears() {
+  if (!state.waterYears) state.waterYears = await fetchJson(VIZ_DATA + "water-years.json");
+  return state.waterYears;
+}
+
+async function loadSonde() {
+  if (state.sonde === undefined) {
+    try {
+      state.sonde = await fetchJson(VIZ_DATA + "sonde.json");
+      state.sondeDayIndex = new Map(state.sonde.days.map((d, i) => [d, i]));
+    } catch { state.sonde = null; }
+  }
+  return state.sonde;
+}
+
+async function loadBasinFlows() {
+  if (state.basinFlows === undefined) {
+    try { state.basinFlows = (await fetchJson(VIZ_DATA + "basin-flows.json")).gages; }
+    catch { state.basinFlows = null; }
+  }
+  return state.basinFlows;
+}
+
+function wyDateIso(wy, i) {
+  return new Date(Date.UTC(+wy - 1, 9, 1) + i * 86400000).toISOString().slice(0, 10);
+}
+
+function seriesFromFold(values, wy) {
+  const out = [];
+  (values || []).forEach((v, i) => {
+    if (v !== null && isFinite(v)) out.push({ t: wyDateIso(wy, i), v });
+  });
+  return out;
+}
+
+function lastKey(obj) { const k = Object.keys(obj).sort(); return k[k.length - 1]; }
+
+function showBasinDetail(id) {
+  const b = basinMetaById(id);
+  if (!b) return;
+  const detail = document.getElementById("detail");
+  const members = b.snotel_members.map((m) => {
+    const pid = state.snotelByTriplet[m.triplet];
+    return pid ? `<button class="member" data-station="${pid}">${m.name}</button>` : m.name;
+  }).join(", ");
+  const nested = id === "south-platte-above-trumbull"
+    ? `<p class="note">This sub-basin nests inside the larger
+       <button class="member" data-basin="south-platte-above-strontia">South Platte above Strontia</button>
+       basin: same slope, same river, a checkpoint partway down.</p>`
+    : id === "south-platte-above-strontia"
+      ? `<p class="note">The smaller
+         <button class="member" data-basin="south-platte-above-trumbull">Trumbull</button>
+         sub-basin nests inside this one, a checkpoint partway down the same river.</p>`
+      : "";
+  detail.innerHTML = `
+    <h2>${b.name}</h2>
+    <div class="kind" style="color:#9db8d8">Sub-basin &middot; ${b.slope === "west" ? "west of the Continental Divide" : "east slope"}</div>
+    <p>${b.blurb}</p>
+    <p class="note"><strong>How its water reaches Denver:</strong> ${b.delivery}</p>
+    ${nested}
+    <p class="note"><strong>Snow stations inside:</strong> ${members || "none mapped"}.
+    <strong>Outlet gage:</strong> ${b.outlet_gage.name}.</p>
+    <div id="chartbox"></div>
+    <p class="note">Why this data: the snow stations inside the outline set this basin's
+    melt timing, and the outlet gage is its pulse; together they are how a basin's
+    behaviour is read.</p>
+    <details class="caveat"><summary>What can go wrong with this reading</summary><p>${CAVEATS.basin}</p></details>`;
+  annotateGlossary();
+  renderBasinCharts(b).catch(() => {});
+  const ring = state.basinGeo[id].geometry.coordinates[0];
+  const lons = ring.map((c) => c[0]), lats = ring.map((c) => c[1]);
+  map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+    { padding: 70, duration: 1600, maxZoom: 10.5 });
+}
+
+async function basinFlowFold(b) {
+  if (b.committed_flow === "flow") {
+    const wyd = await loadWaterYears();
+    return { fold: wyd.series.flow, label: "Outlet flow — South Platte at Waterton (DWR), cubic ft/s" };
+  }
+  const flows = await loadBasinFlows();
+  const g = flows && flows[b.outlet_gage.site];
+  return g ? { fold: g, label: `Outlet flow — ${b.outlet_gage.name}, cubic ft/s` } : null;
+}
+
+async function renderBasinCharts(b) {
+  const box = document.getElementById("chartbox");
+  const wys = Object.keys(b.swe.years).sort();
+  const latestWY = wys[wys.length - 1];
+  const m = b.melt_markers[latestWY] || {};
+  const others = Object.entries(b.melt_markers)
+    .filter(([wy, v]) => wy !== latestWY && v && v.melt_out_doy != null)
+    .map(([, v]) => v.melt_out_doy);
+  let meltText = "";
+  if (m.peak_doy != null) {
+    meltText = `WY ${latestWY}: snowpack peaked at ${m.peak_swe}&Prime; on ${formatDate(wyDateIso(latestWY, m.peak_doy))}`;
+    if (m.melt_out_doy != null) {
+      meltText += `, melt-out by ${formatDate(wyDateIso(latestWY, m.melt_out_doy))}`;
+      if (others.length) {
+        const norm = Math.round(others.reduce((a, v) => a + v, 0) / others.length);
+        const delta = norm - m.melt_out_doy;
+        if (Math.abs(delta) >= 5)
+          meltText += `, ${Math.abs(delta)} days ${delta > 0 ? "earlier" : "later"} than the record's norm`;
+      }
+    }
+    meltText += ".";
+  }
+  let flowInfo = null;
+  try { flowInfo = await basinFlowFold(b); } catch { flowInfo = null; }
+  box.innerHTML = `
+    <div class="spark-label">Basin snowpack — snow water equivalent averaged across its
+      ${b.snotel_members.length === 1 ? "one station" : b.snotel_members.length + " stations"}, inches</div>
+    <canvas class="spark tall" id="basin-swe"></canvas>
+    <div class="spark-label">Grey: each water year since ${wys[0]}. Dashed: median. Blue: WY ${latestWY}.</div>
+    ${meltText ? `<div class="spark-label">${meltText}</div>` : ""}
+    ${flowInfo ? `
+      <div class="spark-label" style="margin-top:12px">${flowInfo.label}</div>
+      <canvas class="spark tall" id="basin-flow"></canvas>
+      <div class="spark-label">Same reading: grey years, dashed median, blue latest.</div>`
+    : `<div class="spark-label" style="margin-top:12px">This basin's outlet hydrograph is not
+      committed yet: run <code>teams/explainable-viz/fetch_basin_flows.py</code> once (needs
+      network) and it will appear here.</div>`}`;
+  annotateGlossary(box);
+  drawOverlay(box.querySelector("#basin-swe"), b.swe,
+    seriesFromFold(b.swe.years[latestWY], latestWY), true);
+  if (flowInfo) {
+    const fw = lastKey(flowInfo.fold.years);
+    drawOverlay(box.querySelector("#basin-flow"), flowInfo.fold,
+      seriesFromFold(flowInfo.fold.years[fw], fw), true);
+  }
+}
+
+/* --------------------------------------------------------- water-year replay */
+
+const SEASON = {
+  wy: "2026", metric: "swe", idx: 0, timer: null, msPerFrame: 110, dayMax: 365,
+  series: null, captions: [],
+  view: { center: [-105.75, 39.52], zoom: 7.55, pitch: 45, bearing: -10 },
+};
+const SEASON_METRICS = [
+  { id: "swe", label: "\u2744 Snowpack vs median" },
+  { id: "melt", label: "Melt state" },
+  { id: "flow", label: "Flow vs median" },
+];
+
+function lerpColor(stops, t) {
+  t = Math.max(0, Math.min(1, t));
+  for (let i = 1; i < stops.length; i++) {
+    if (t <= stops[i][0]) {
+      const f = (t - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0] || 1);
+      const a = stops[i - 1][1], b = stops[i][1];
+      return `rgb(${Math.round(a[0] + f * (b[0] - a[0]))},${Math.round(a[1] + f * (b[1] - a[1]))},${Math.round(a[2] + f * (b[2] - a[2]))})`;
+    }
+  }
+  return `rgb(${stops[stops.length - 1][1].join(",")})`;
+}
+
+const SWE_STOPS = [[0, [125, 96, 60]], [0.45, [205, 186, 148]], [0.68, [223, 234, 250]], [1, [57, 135, 229]]];
+const FLOW_STOPS = [[0, [125, 96, 60]], [0.5, [200, 210, 220]], [1, [38, 118, 220]]];
+const MELT_COLORS = { snow: "#dfeaff", melting: "#ff9d3d", bare: "#8a6f4d" };
+
+function seasonBasinColor(b, i) {
+  if (SEASON.metric === "swe") {
+    const cur = (b.swe.years[SEASON.wy] || [])[i];
+    if (cur == null) return null;
+    const med = b.swe.median[i];
+    if (!med || med < 0.4) return cur > 0.4 ? { fill: MELT_COLORS.snow, op: 0.3 } : { fill: MELT_COLORS.bare, op: 0.16 };
+    return { fill: lerpColor(SWE_STOPS, (cur / med) / 1.6), op: 0.34 };
+  }
+  if (SEASON.metric === "melt") {
+    const m = b.melt_markers[SEASON.wy] || {};
+    const cur = (b.swe.years[SEASON.wy] || [])[i];
+    if (m.onset_doy == null || cur == null) return null;
+    if (i >= (m.melt_out_doy ?? 400)) return { fill: MELT_COLORS.bare, op: 0.26 };
+    if (i >= m.onset_doy) return { fill: MELT_COLORS.melting, op: 0.36 };
+    return { fill: cur >= 0.3 ? MELT_COLORS.snow : MELT_COLORS.bare, op: cur >= 0.3 ? 0.32 : 0.2 };
+  }
+  const fold = b.committed_flow === "flow"
+    ? state.waterYears.series.flow
+    : state.basinFlows && state.basinFlows[b.outlet_gage.site];
+  const cur = fold && (fold.years[SEASON.wy] || [])[i];
+  if (cur == null) return { fill: "#777777", op: 0.1 };
+  const med = fold.median[i];
+  if (!med) return { fill: "#777777", op: 0.1 };
+  return { fill: lerpColor(FLOW_STOPS, (cur / med) / 2), op: 0.36 };
+}
+
+function buildDaySeries(values, wy) {
+  const list = [], dayToIdx = new Array(366).fill(-1);
+  let last = -1;
+  for (let i = 0; i < 366; i++) {
+    const v = (values || [])[i];
+    if (v !== null && v !== undefined && isFinite(v)) { list.push({ t: wyDateIso(wy, i), v }); last = list.length - 1; }
+    dayToIdx[i] = last;
+  }
+  return { list, dayToIdx };
+}
+
+function idxOfMax(arr) {
+  let best = -1;
+  (arr || []).forEach((v, i) => { if (v != null && (best < 0 || v > arr[best])) best = i; });
+  return best;
+}
+
+function wyDayOf(wy, month, day) {
+  return Math.round((Date.UTC(month >= 10 ? +wy - 1 : +wy, month - 1, day) - Date.UTC(+wy - 1, 9, 1)) / 86400000);
+}
+
+function buildSeasonCaptions(wy) {
+  const s = state.waterYears.series;
+  const swe = s.swe_hoosier.years[wy] || [];
+  const flow = s.flow.years[wy] || [];
+  const toc = s.toc.years[wy] || [];
+  const east = (basinMetaById("south-platte-above-strontia") || {}).melt_markers;
+  const west = (basinMetaById("blue-river-below-dillon") || {}).melt_markers;
+  const e = east && east[wy], w = west && west[wy];
+  const day = (i) => formatDate(wyDateIso(wy, i));
+  const caps = [{ from: 0, text: `Oct 1: water year ${wy} opens. The basins are bare; everything ahead depends on the snow this winter banks.` }];
+  const firstSnow = swe.findIndex((v) => v != null && v >= 1);
+  if (firstSnow > 0) caps.push({ from: firstSnow, text: `${day(firstSnow)}: the snowpack starts banking water at Hoosier Pass. Watch the basins whiten as storms stack up.` });
+  const peak = idxOfMax(swe);
+  if (peak > 0 && swe[peak] > 2) caps.push({ from: peak, text: `${day(peak)}: peak snowpack. ${swe[peak].toFixed(1)} inches of water stand in the snow at Hoosier Pass — the year's water supply, written on the mountains.` });
+  if (e && e.onset_doy != null) caps.push({ from: e.onset_doy, text: `${day(e.onset_doy)}: melt onset on the east slope. The South Platte basins start spending their snow; the rivers begin to rise.` });
+  if (e && e.melt_out_doy != null) caps.push({ from: e.melt_out_doy, text: `${day(e.melt_out_doy)}: the east slope is bare${w && w.melt_out_doy ? `, while the higher west-slope basins hold snow until about ${day(w.melt_out_doy)}` : ""}. Two slopes, two personalities.` });
+  const peakFlow = idxOfMax(flow);
+  if (peakFlow > 0) caps.push({ from: peakFlow, text: `${day(peakFlow)}: peak runoff — ${Math.round(flow[peakFlow]).toLocaleString()} cubic ft/s past Waterton. The rivers are moving the winter to the city.` });
+  const peakToc = idxOfMax(toc);
+  if (peakToc > 0) caps.push({ from: peakToc, text: `${day(peakToc)}: the plant's hardest stretch. TOC tops ${toc[peakToc].toFixed(1)} mg/L as runoff flushes the watershed's organic carbon downstream.` });
+  if (wy === "2026") {
+    const sondeStart = wyDayOf(wy, 4, 7);
+    caps.push({ from: sondeStart, text: `${day(sondeStart)}: a sonde starts profiling Strontia Springs Reservoir. The depth column at the dam shows each day's temperature from surface to bottom — watch it stratify as summer builds.` });
+    const aug14 = wyDayOf(wy, 8, 14);
+    caps.push({ from: aug14, text: `${day(aug14)}: monsoon cells train over the canyon. This is the storm the map can replay in 15-minute detail — exit and press \u201CReplay the Aug 14-15 storm\u201D.` });
+  }
+  caps.push({ from: Math.max(0, SEASON.dayMax - 6), text: `The year winds down. One honest note: at 24 hours, \u201Ctomorrow looks like today\u201D still beats every model here; these rhythms are where multi-day intuition lives.` });
+  return caps.sort((a, b) => a.from - b.from);
+}
+
+function seasonLastDay(wy) {
+  const s = state.waterYears.series;
+  let last = 0;
+  for (const key of ["swe_hoosier", "flow", "toc"]) {
+    const arr = s[key].years[wy] || [];
+    for (let i = 365; i >= 0; i--) if (arr[i] != null) { last = Math.max(last, i); break; }
+  }
+  return last || 365;
+}
+
+function seasonBuildExtras() {
+  const extras = document.getElementById("replay-extras");
+  const wys = Object.keys(state.waterYears.series.flow.years).sort();
+  extras.innerHTML =
+    wys.map((w) => `<button class="mini-chip wy ${w === SEASON.wy ? "on" : ""}" data-wy="${w}">WY ${w}</button>`).join("") +
+    SEASON_METRICS.map((m) => `<button class="mini-chip metric ${m.id === SEASON.metric ? "on" : ""}" data-metric="${m.id}">${m.label}</button>`).join("");
+  extras.querySelectorAll(".wy").forEach((b) => { b.onclick = () => seasonSelectWY(b.dataset.wy); });
+  extras.querySelectorAll(".metric").forEach((b) => {
+    b.onclick = () => { SEASON.metric = b.dataset.metric; seasonBuildExtras(); seasonNote(); seasonSet(SEASON.idx); };
+  });
+}
+
+function seasonNote() {
+  const note = document.getElementById("season-note");
+  if (!note) return;
+  note.textContent = SEASON.metric === "flow"
+    ? (state.basinFlows
+      ? "Basin shading: brown = flow far below that day's median, blue = above it."
+      : "Flow shading covers the Strontia basin only — run teams/explainable-viz/fetch_basin_flows.py once to add the west-slope gages.")
+    : SEASON.metric === "melt"
+      ? "Basin shading: blue-white = holding snow \u00B7 orange = actively melting \u00B7 brown = melted out."
+      : "Basin shading: brown = snowpack far below that day's median, pale = near it, blue = above it.";
+}
+
+function seasonSelectWY(wy) {
+  SEASON.wy = wy;
+  SEASON.dayMax = seasonLastDay(wy);
+  SEASON.captions = buildSeasonCaptions(wy);
+  const s = state.waterYears.series;
+  SEASON.series = {
+    flow: buildDaySeries(s.flow.years[wy], wy),
+    toc: buildDaySeries(s.toc.years[wy], wy),
+    alk: buildDaySeries(s.alk.years[wy], wy),
+  };
+  document.getElementById("replay-slider").max = SEASON.dayMax;
+  seasonBuildExtras();
+  seasonSet(Math.min(SEASON.idx, SEASON.dayMax));
+}
+
+function seasonSet(i) {
+  SEASON.idx = i;
+  document.getElementById("replay-slider").value = i;
+  const iso = wyDateIso(SEASON.wy, i);
+  document.getElementById("replay-time").textContent =
+    parseDate(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" }) +
+    ` \u00B7 day ${i + 1} of the water year`;
+  document.getElementById("replay-caption").textContent = seasonCaption(i);
+  for (const b of state.basinMeta.basins) {
+    const c = seasonBasinColor(b, i);
+    const fid = state.basinFeatureId[b.id];
+    if (fid === undefined) continue;
+    if (c) map.setFeatureState({ source: "basins", id: fid }, { fill: c.fill, op: c.op });
+    else map.removeFeatureState({ source: "basins", id: fid });
+  }
+  const flowFold = state.waterYears.series.flow;
+  const fv = (flowFold.years[SEASON.wy] || [])[i], fm = flowFold.median[i];
+  const ratio = fv != null && fm ? fv / fm : 0;
+  map.setPaintProperty("river-line", "line-width", 1.2 + 2.4 * Math.min(ratio, 2.5));
+  if (SEASON.series.flow.list.length)
+    drawSpark(document.getElementById("season-flow"), SEASON.series.flow.list, "#6fc3ff", SEASON.series.flow.dayToIdx[i]);
+  if (SEASON.series.toc.list.length)
+    drawSpark(document.getElementById("season-toc"), SEASON.series.toc.list, "#199e70", SEASON.series.toc.dayToIdx[i]);
+  if (SEASON.series.alk.list.length)
+    drawSpark(document.getElementById("season-alk"), SEASON.series.alk.list, "#3987e5", SEASON.series.alk.dayToIdx[i]);
+  updateDepthColumn(iso);
+}
+
+function seasonCaption(i) {
+  let text = "";
+  for (const c of SEASON.captions) if (c.from <= i) text = c.text;
+  return text;
+}
+
+function seasonPlaying() { return SEASON.timer !== null; }
+
+function seasonPause() {
+  clearInterval(SEASON.timer);
+  SEASON.timer = null;
+  document.getElementById("replay-play").textContent = "Play";
+}
+
+function seasonPlay() {
+  if (SEASON.idx >= SEASON.dayMax) SEASON.idx = 0;
+  SEASON.timer = setInterval(() => {
+    SEASON.idx >= SEASON.dayMax ? seasonPause() : seasonSet(SEASON.idx + 1);
+  }, SEASON.msPerFrame);
+  document.getElementById("replay-play").textContent = "Pause";
+}
+
+async function seasonStart() {
+  state.replayMode = "season";
+  document.getElementById("tour-start").style.display = "none";
+  document.getElementById("replay-start").style.display = "none";
+  document.getElementById("season-start").style.display = "none";
+  document.getElementById("detail").innerHTML = "";
+  document.getElementById("replaybar").style.display = "block";
+  document.getElementById("replay-caption").textContent = "Loading the season record\u2026";
+  map.flyTo({ ...SEASON.view, speed: 0.9 });
+  try {
+    await Promise.all([loadWaterYears(), loadSonde(), loadBasinFlows()]);
+  } catch (err) {
+    document.getElementById("replay-caption").textContent = "Could not load the season data (" + err.message + ").";
+    return;
+  }
+  document.getElementById("replay-charts").innerHTML = `
+    <div class="spark-label" id="season-note"></div>
+    <div class="spark-label" style="margin-top:6px">Flow — South Platte at Waterton, cubic ft/s</div>
+    <canvas class="spark" id="season-flow"></canvas>
+    <div class="spark-label">Organic carbon (TOC) arriving at Foothills, mg/L</div>
+    <canvas class="spark" id="season-toc"></canvas>
+    <div class="spark-label">Alkalinity at Foothills, mg/L</div>
+    <canvas class="spark" id="season-alk"></canvas>
+    <div class="spark-label">Why these series: flow scales the loading, and TOC and
+      alkalinity are what the plant must dose for — the same causal chain the
+      forecasting models lean on.</div>
+    <details class="caveat"><summary>About the reservoir column</summary><p>${CAVEATS.sonde}</p></details>`;
+  SEASON.idx = 0;
+  seasonSelectWY(SEASON.wy);
+  seasonNote();
+  seasonPlay();
+}
+
+function seasonExit() {
+  state.replayMode = null;
+  seasonPause();
+  map.removeFeatureState({ source: "basins" });
+  map.setPaintProperty("river-line", "line-width", 2);
+  if (state.depthMarker) { state.depthMarker.remove(); state.depthMarker = null; }
+  document.getElementById("replay-extras").innerHTML = "";
+  document.getElementById("replaybar").style.display = "none";
+  document.getElementById("tour-start").style.display = "block";
+  document.getElementById("replay-start").style.display = "block";
+  document.getElementById("season-start").style.display = "block";
+  showIntro();
+  map.flyTo({ ...HOME, speed: 0.75 });
+}
+
+document.getElementById("season-start").onclick = seasonStart;
+
+/* ------------------------------------------------------ reservoir depth column */
+
+function tempColor(v) {
+  const t = Math.max(0, Math.min(1, (v - 4) / 17));
+  return `hsl(${Math.round(225 - 217 * t)}, 72%, ${Math.round(32 + 26 * t)}%)`;
+}
+
+function ensureDepthMarker() {
+  if (state.depthMarker) return state.depthMarker;
+  const dam = state.byId["dam-strontia"];
+  if (!dam) return null;
+  const el = document.createElement("div");
+  el.id = "depth-marker";
+  el.innerHTML = `<div class="state"></div><canvas width="26" height="110"></canvas><div class="temps"></div>`;
+  state.depthMarker = new maplibregl.Marker({ element: el, anchor: "left", offset: [16, 0] })
+    .setLngLat([dam.lon, dam.lat]).addTo(map);
+  return state.depthMarker;
+}
+
+function updateDepthColumn(iso) {
+  const dayIdx = state.sonde && state.sondeDayIndex.get(iso);
+  if (dayIdx === undefined || dayIdx === null) {
+    if (state.depthMarker) state.depthMarker.getElement().style.display = "none";
+    return;
+  }
+  const marker = ensureDepthMarker();
+  if (!marker) return;
+  const el = marker.getElement();
+  el.style.display = "block";
+  const grid = state.sonde.params.temp.grid;
+  const profile = grid.map((row) => row[dayIdx]);
+  let dmax = -1;
+  profile.forEach((v, d) => { if (v != null) dmax = d; });
+  const canvas = el.querySelector("canvas");
+  const ratio = window.devicePixelRatio || 1;
+  const W = 26, H = 110;
+  canvas.width = W * ratio; canvas.height = H * ratio;
+  const g = canvas.getContext("2d");
+  g.scale(ratio, ratio);
+  g.clearRect(0, 0, W, H);
+  if (dmax >= 0) {
+    const bin = H / (dmax + 1);
+    for (let d = 0; d <= dmax; d++) {
+      if (profile[d] == null) continue;
+      g.fillStyle = tempColor(profile[d]);
+      g.fillRect(0, d * bin, W, bin + 0.6);
+    }
+    g.strokeStyle = "rgba(255,255,255,0.4)";
+    g.strokeRect(0.5, 0.5, W - 1, H - 1);
+  }
+  const strat = state.sonde.bands.strat[dayIdx];
+  const surface = state.sonde.bands.surface_temp[dayIdx];
+  const bottom = state.sonde.bands.bottom_temp[dayIdx];
+  el.querySelector(".state").textContent =
+    strat == null ? "Strontia column" : strat >= 2 ? "Stratified" : strat >= 0.75 ? "Weakly layered" : "Mixed";
+  el.querySelector(".temps").textContent =
+    surface != null && bottom != null
+      ? `${surface.toFixed(1)}\u00B0 top \u00B7 ${bottom.toFixed(1)}\u00B0 bottom`
+      : "surface \u2192 bottom";
+}
 
 map.on("load", () =>
   loadEverything().catch((err) => {
