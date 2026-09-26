@@ -1,0 +1,26 @@
+{
+  "arrival_nowcast:toc": {
+    "holdout_mae": 0.4631326654151958,
+    "baseline_mae": 0.6242741669416032,
+    "beats_baseline": true,
+    "beats_persistence": null
+  },
+  "arrival_nowcast:alk": {
+    "holdout_mae": 5.574791508638521,
+    "baseline_mae": 6.285306935856369,
+    "beats_baseline": true,
+    "beats_persistence": null
+  },
+  "forecast_24h:toc": {
+    "holdout_mae": 0.4617395978247661,
+    "baseline_mae": 0.6246887403105937,
+    "beats_baseline": true,
+    "beats_persistence": false
+  },
+  "forecast_24h:alk": {
+    "holdout_mae": 5.6083491461438815,
+    "baseline_mae": 6.292198396419912,
+    "beats_baseline": true,
+    "beats_persistence": false
+  }
+}

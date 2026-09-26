@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terrain flow simulation: Denver Water's South Platte collection system</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+  :root {
+    --panel-bg: rgba(16, 20, 24, 0.92);
+    --panel-ink: #f2f4f6;
+    --panel-ink-2: #b8c0c8;
+    --panel-line: rgba(255, 255, 255, 0.14);
+    --c-reservoir: #3987e5;
+    --c-gage: #d95926;
+    --c-plant: #199e70;
+    --c-snotel: #ffffff;
+    --c-river: #6fc3ff;
+    --c-tunnel: #ffd166;
+    --c-overland: #a9d7ff;
+    --c-channel: #4fb3ff;
+    --c-reservoir-p: #1f4f9a;
+    --c-conduit: #4cd7a5;
+    --c-proposed: #ff7ad9;
+    --badge-computed: #4cd7a5;
+    --badge-assumed: #ffd166;
+    --badge-general: #b8c0c8;
+  }
+  html, body { margin: 0; height: 100%; background: #101418; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #map { position: absolute; inset: 0; }
+  #panel {
+    position: absolute; top: 12px; left: 12px; z-index: 5;
+    width: 380px; max-height: calc(100% - 24px); overflow-y: auto;
+    background: var(--panel-bg); color: var(--panel-ink);
+    border: 1px solid var(--panel-line); border-radius: 12px;
+    padding: 14px 16px; box-sizing: border-box; backdrop-filter: blur(6px);
+  }
+  #panel h1 { font-size: 17px; margin: 0 0 2px; }
+  #panel .sub { font-size: 12px; color: var(--panel-ink-2); margin: 0 0 10px; line-height: 1.4; }
+  #panel a { color: #6fc3ff; }
+  #tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 10px; }
+  #tabs button {
+    flex: 1 1 auto; font-size: 12px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--panel-line); background: rgba(255,255,255,0.06); color: var(--panel-ink);
+  }
+  #tabs button.on { background: #1c5cab; border-color: #1c5cab; }
+  #content h2 { font-size: 15px; margin: 10px 0 4px; }
+  #content h3 { font-size: 13px; margin: 12px 0 4px; color: var(--panel-ink); }
+  #content p, #content li { font-size: 13px; line-height: 1.45; margin: 6px 0; }
+  #content ul { padding-left: 18px; margin: 4px 0; }
+  #content .note { font-size: 11.5px; color: var(--panel-ink-2); }
+  #content table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 6px 0; }
+  #content th, #content td { text-align: left; padding: 3px 5px; border-bottom: 1px solid var(--panel-line); vertical-align: top; }
+  #content th { color: var(--panel-ink-2); font-weight: 500; font-size: 11px; }
+  #content td.num, #content th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  canvas.chart { width: 100%; height: 120px; display: block; margin-top: 6px; background: rgba(255,255,255,0.03); border-radius: 6px; }
+  canvas.chart.tall { height: 170px; }
+  .chart-label { font-size: 11px; color: var(--panel-ink-2); margin-top: 4px; }
+  .badge {
+    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 1px 6px; border-radius: 4px; margin-right: 6px; vertical-align: middle; border: 1px solid currentColor;
+  }
+  .badge.computed { color: var(--badge-computed); }
+  .badge.assumed { color: var(--badge-assumed); }
+  .badge.general { color: var(--badge-general); }
+  .badge.quote { color: #6fc3ff; }
+  .card { margin: 10px 0; padding: 8px 10px; border: 1px solid var(--panel-line); border-radius: 8px; background: rgba(255,255,255,0.04); }
+  .card h3 { margin: 0 0 4px !important; }
+  .formula { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12px; color: #dfe8f2; margin: 4px 0; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+  .stat { padding: 7px 8px; border: 1px solid var(--panel-line); border-radius: 7px; background: rgba(255,255,255,0.05); }
+  .stat b { display: block; font-size: 17px; }
+  .stat span { color: var(--panel-ink-2); font-size: 10.5px; }
+  button.action {
+    width: 100%; margin-top: 8px; padding: 8px 10px; font-size: 13px;
+    border-radius: 8px; border: 1px solid var(--panel-line);
+    background: #1c5cab; color: #fff; cursor: pointer;
+  }
+  button.action.quiet { background: rgba(255, 255, 255, 0.08); }
+  .row { display: flex; gap: 6px; }
+  .row button { flex: 1; margin-top: 6px; }
+  #timebar { margin-top: 8px; }
+  #timebar .time { font-size: 13px; font-weight: 600; margin: 2px 0 4px; display: flex; justify-content: space-between; }
+  #timebar input[type=range] { width: 100%; margin: 2px 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 3px 8px; border-radius: 999px;
+    border: 1px solid var(--panel-line); cursor: pointer; user-select: none; background: rgba(255,255,255,0.05); color: var(--panel-ink);
+  }
+  .chip.off { opacity: 0.35; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.9); }
+  .legend-row { display: flex; align-items: center; gap: 6px; font-size: 11.5px; margin: 2px 0; color: var(--panel-ink-2); }
+  .legend-row .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .warn {
+    margin: 8px 0; padding: 7px 9px; border: 1px solid #ffd166; border-radius: 6px; color: #ffd166;
+    background: rgba(255,209,102,0.10); font-size: 11.5px; line-height: 1.4;
+  }
+  .missing {
+    margin: 8px 0; padding: 7px 9px; border: 1px dashed var(--panel-line); border-radius: 6px; color: var(--panel-ink-2); font-size: 12px;
+  }
+  .gauge-wrap { display: flex; gap: 12px; align-items: flex-end; margin: 8px 0; }
+  .gauge-wrap svg { flex: 0 0 90px; }
+  .gauge-read { font-size: 13px; }
+  .gauge-read b { font-size: 26px; display: block; }
+  details.caveat { margin-top: 10px; font-size: 12.5px; }
+  details.caveat summary { cursor: pointer; color: var(--panel-ink-2); font-size: 12px; }
+  details.caveat p { margin: 6px 0 0; color: var(--panel-ink); line-height: 1.4; }
+  #attribution { font-size: 10px; color: var(--panel-ink-2); margin-top: 12px; line-height: 1.5; }
+  #attribution a { color: var(--panel-ink-2); }
+  #counter {
+    position: absolute; right: 12px; bottom: 24px; z-index: 5; min-width: 220px;
+    background: var(--panel-bg); color: var(--panel-ink); border: 1px solid var(--panel-line); border-radius: 10px;
+    padding: 10px 12px; font-size: 12px; display: none; backdrop-filter: blur(6px);
+  }
+  #counter b { font-size: 15px; }
+  #counter .k { color: var(--panel-ink-2); }
+  #tip {
+    position: absolute; z-index: 6; pointer-events: none; display: none;
+    background: var(--panel-bg); color: var(--panel-ink); font-size: 12px;
+    padding: 4px 8px; border-radius: 6px; border: 1px solid var(--panel-line);
+    transform: translate(12px, -50%); white-space: nowrap;
+  }
+  @media (max-width: 640px) { #panel { width: calc(100% - 24px); max-height: 55%; } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="tip"></div>
+<div id="counter"></div>
+
+<div id="panel">
+  <h1>Where the water goes, and how fast</h1>
+  <p class="sub">A physics-labelled simulation of Denver Water's South Platte collection system on real terrain:
+    snowmelt and rain seed particles that follow the land downhill, join the river, cross the reservoir and reach the
+    Foothills plant. Every number says whether it was <span class="badge computed">computed</span> from the files here,
+    <span class="badge assumed">assumed</span>, or is <span class="badge general">general</span> knowledge.
+    <a href="../../design-storm-water-system-3d">Back to the system map</a>.</p>
+  <div id="tabs">
+    <button data-mode="flow" class="on">Flow sim</button>
+    <button data-mode="gauge">Rain gauge</button>
+    <button data-mode="physics">Physics</button>
+    <button data-mode="climate">Climate</button>
+    <button data-mode="feasibility">12-hour feasibility</button>
+  </div>
+  <div id="content"><p class="note">Loading terrain, basins and data…</p></div>
+  <div id="attribution">
+    Imagery &copy; Esri &amp; contributors &middot; Terrain: Mapzen via AWS &middot; Basins &amp; rivers: USGS NLDI &middot;
+    Tunnels: OpenStreetMap contributors &middot; Readings: USGS, Colorado DWR, NRCS, NOAA (all provisional) &middot;
+    Denver Water data terms apply (<a href="TERMS.md">TERMS.md</a>). No number here is settled; sources revise after publication.
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

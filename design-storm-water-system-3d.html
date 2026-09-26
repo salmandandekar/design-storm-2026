@@ -71,6 +71,16 @@
     background: rgba(57, 135, 229, 0.16); border-left: 3px solid #3987e5;
     border-radius: 4px; min-height: 34px;
   }
+  .demo-banner {
+    margin: 8px 0; padding: 7px 9px; border: 1px solid #ffd166;
+    border-radius: 6px; color: #ffd166; background: rgba(255,209,102,0.12);
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
+  }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+  .stat { padding: 7px 8px; border: 1px solid var(--panel-line); border-radius: 7px;
+    background: rgba(255,255,255,0.05); }
+  .stat b { display: block; font-size: 17px; }
+  .stat span { color: var(--panel-ink-2); font-size: 10.5px; }
   #attribution { font-size: 10px; color: var(--panel-ink-2); margin-top: 12px; line-height: 1.5; }
   #attribution a { color: var(--panel-ink-2); }
   #panel a { color: #6fc3ff; }
@@ -149,6 +159,8 @@
   <button class="action" id="tour-start">&#9992; Fly the water&rsquo;s path</button>
   <button class="action quiet" id="replay-start">&#9928; Replay the Aug 14-15 storm</button>
   <button class="action quiet" id="season-start" style="display:none">&#10052; Replay a water year</button>
+  <button class="action quiet" id="prediction-demo-start">&#9654; Prediction terrain demo</button>
+  <button class="action quiet" id="terrain-sim-start" onclick="location.href='teams/terrain-flow-sim/'">&#9729; Terrain flow simulation</button>
   <div id="replaybar">
     <div class="time" id="replay-time"></div>
     <div id="replay-extras"></div>
@@ -346,6 +358,7 @@ async function loadEverything() {
   buildLegend();
   showIntro();
   if (state.basinMeta) document.getElementById("season-start").style.display = "block";
+  if (location.hash === "#prediction-demo") predictionDemoStart();
 }
 
 function wireInteraction() {
@@ -987,6 +1000,7 @@ async function replayStart() {
   document.getElementById("tour-start").style.display = "none";
   document.getElementById("replay-start").style.display = "none";
   document.getElementById("season-start").style.display = "none";
+  document.getElementById("prediction-demo-start").style.display = "none";
   document.getElementById("replay-extras").innerHTML = "";
   document.getElementById("detail").innerHTML = "";
   document.getElementById("replaybar").style.display = "block";
@@ -1019,20 +1033,27 @@ function replayExit() {
   document.getElementById("tour-start").style.display = "block";
   document.getElementById("replay-start").style.display = "block";
   if (state.basinMeta) document.getElementById("season-start").style.display = "block";
+  document.getElementById("prediction-demo-start").style.display = "block";
   showIntro();
   map.flyTo({ ...HOME, speed: 0.75 });
 }
 
 document.getElementById("replay-start").onclick = replayStart;
 document.getElementById("replay-exit").onclick = () =>
-  state.replayMode === "season" ? seasonExit() : replayExit();
+  state.replayMode === "season" ? seasonExit()
+    : state.replayMode === "prediction-demo" ? predictionDemoExit()
+    : replayExit();
 document.getElementById("replay-play").onclick = () => {
   if (state.replayMode === "season") return seasonPlaying() ? seasonPause() : seasonPlay();
+  if (state.replayMode === "prediction-demo")
+    return predictionDemoPlaying() ? predictionDemoPause() : predictionDemoPlay();
   replayPlaying() ? replayPause() : replayPlay();
 };
 document.getElementById("replay-slider").oninput = (e) => {
   const v = parseInt(e.target.value, 10);
-  state.replayMode === "season" ? seasonSet(v) : replaySet(v);
+  state.replayMode === "season" ? seasonSet(v)
+    : state.replayMode === "prediction-demo" ? predictionDemoSet(v)
+    : replaySet(v);
 };
 
 /* ------------------------------------------------------- sub-basins & seasons */
@@ -1385,6 +1406,7 @@ async function seasonStart() {
   document.getElementById("tour-start").style.display = "none";
   document.getElementById("replay-start").style.display = "none";
   document.getElementById("season-start").style.display = "none";
+  document.getElementById("prediction-demo-start").style.display = "none";
   document.getElementById("detail").innerHTML = "";
   document.getElementById("replaybar").style.display = "block";
   document.getElementById("replay-caption").textContent = "Loading the season record\u2026";
@@ -1424,11 +1446,166 @@ function seasonExit() {
   document.getElementById("tour-start").style.display = "block";
   document.getElementById("replay-start").style.display = "block";
   document.getElementById("season-start").style.display = "block";
+  document.getElementById("prediction-demo-start").style.display = "block";
   showIntro();
   map.flyTo({ ...HOME, speed: 0.75 });
 }
 
 document.getElementById("season-start").onclick = seasonStart;
+
+/* ------------------------------------------------ synthetic prediction demo */
+
+const PREDICTION_DEMO = {
+  data: null, idx: 0, timer: null, marker: null, msPerFrame: 650,
+  view: { center: [-105.12, 39.46], zoom: 11.1, pitch: 67, bearing: -35 },
+};
+
+async function loadPredictionDemo() {
+  if (!PREDICTION_DEMO.data)
+    PREDICTION_DEMO.data = await fetchJson("water-system-3d/prediction-demo.json");
+  if (!PREDICTION_DEMO.data.synthetic)
+    throw new Error("demo feed is not marked synthetic");
+  return PREDICTION_DEMO.data;
+}
+
+function predictionDemoColor(frame) {
+  if (frame.toc.value >= PREDICTION_DEMO.data.thresholds.toc_watch_mg_L) return "#d95926";
+  if (frame.alk.value <= PREDICTION_DEMO.data.thresholds.alk_watch_mg_L) return "#ffd166";
+  return "#199e70";
+}
+
+function ensurePredictionMarker() {
+  if (PREDICTION_DEMO.marker) return;
+  const station = PREDICTION_DEMO.data.station;
+  const element = document.createElement("div");
+  element.style.cssText = "width:40px;height:40px;display:grid;place-items:center";
+  const pulse = document.createElement("div");
+  pulse.style.cssText = "width:28px;height:28px;border-radius:50%;border:3px solid #fff;" +
+    "box-shadow:0 0 0 7px rgba(255,255,255,.18);transition:all .25s";
+  element.appendChild(pulse);
+  PREDICTION_DEMO.marker = new maplibregl.Marker({ element, anchor: "center" })
+    .setLngLat([station.lon, station.lat]).addTo(map);
+}
+
+function predictionDemoStats(frame) {
+  const status = PREDICTION_DEMO.data.model_status;
+  const stats = PREDICTION_DEMO.data.statistics;
+  return `<div class="demo-banner">${PREDICTION_DEMO.data.label}</div>
+    <div class="stat-grid">
+      <div class="stat"><b style="color:#199e70">${formatValue(frame.toc.value)}</b><span>TOC mg/L · 95% PI ${formatValue(frame.toc.lower)}–${formatValue(frame.toc.upper)}</span></div>
+      <div class="stat"><b style="color:#3987e5">${formatValue(frame.alk.value)}</b><span>Alkalinity mg/L · 95% PI ${formatValue(frame.alk.lower)}–${formatValue(frame.alk.upper)}</span></div>
+      <div class="stat"><b>${formatValue(frame.rainfall_in)} in</b><span>Synthetic daily rain</span></div>
+      <div class="stat"><b>${Math.round(frame.coverage_fraction * 100)}%</b><span>Gauge coverage</span></div>
+    </div>
+    <div class="spark-label">Demo model: ${status.gauge_count} gauges · TOC MAE ${status.toc_holdout_mae} · alkalinity MAE ${status.alk_holdout_mae} · ${status.beats_persistence ? "beats" : "does not beat"} persistence</div>
+    <div class="spark-label">30-day synthetic summary: ${stats.rainfall_total_in} in rain ·
+      peak TOC ${stats.toc_peak_mg_L} mg/L (${stats.toc_watch_days} watch days) ·
+      minimum alkalinity ${stats.alk_min_mg_L} mg/L (${stats.alk_watch_days} watch days)</div>`;
+}
+
+function predictionDemoCaption(frame) {
+  const tocWatch = frame.toc.value >= PREDICTION_DEMO.data.thresholds.toc_watch_mg_L;
+  const alkWatch = frame.alk.value <= PREDICTION_DEMO.data.thresholds.alk_watch_mg_L;
+  if (tocWatch && alkWatch) return "Synthetic watch: TOC is high and alkalinity is low. The orange plant pulse exercises the combined warning state.";
+  if (tocWatch) return "Synthetic TOC watch: the storm response pushes organic carbon above the demo threshold.";
+  if (alkWatch) return "Synthetic alkalinity watch: buffering capacity falls below the demo threshold.";
+  return "Synthetic normal state. Move the timeline to test values, intervals, coverage, and warning transitions.";
+}
+
+function predictionDemoSet(i) {
+  PREDICTION_DEMO.idx = i;
+  const data = PREDICTION_DEMO.data;
+  const frame = data.frames[i];
+  document.getElementById("replay-slider").value = i;
+  document.getElementById("replay-time").textContent =
+    parseDate(frame.date).toLocaleDateString(undefined,
+      { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  document.getElementById("replay-caption").textContent = predictionDemoCaption(frame);
+  document.getElementById("prediction-demo-stats").innerHTML = predictionDemoStats(frame);
+  drawSpark(document.getElementById("prediction-demo-rain"),
+    data.frames.map((item) => ({ t: item.date, v: item.rainfall_in })), "#6fc3ff", i);
+  drawSpark(document.getElementById("prediction-demo-toc"),
+    data.frames.map((item) => ({ t: item.date, v: item.toc.value })), "#199e70", i);
+  drawSpark(document.getElementById("prediction-demo-alk"),
+    data.frames.map((item) => ({ t: item.date, v: item.alk.value })), "#3987e5", i);
+  const color = predictionDemoColor(frame);
+  const pulse = PREDICTION_DEMO.marker.getElement().firstElementChild;
+  pulse.style.background = color;
+  pulse.style.transform = `scale(${1 + Math.max(0, frame.toc.value - 2) * 0.22})`;
+}
+
+function predictionDemoPlaying() { return PREDICTION_DEMO.timer !== null; }
+
+function predictionDemoPause() {
+  clearInterval(PREDICTION_DEMO.timer);
+  PREDICTION_DEMO.timer = null;
+  document.getElementById("replay-play").textContent = "Play";
+}
+
+function predictionDemoPlay() {
+  if (PREDICTION_DEMO.idx >= PREDICTION_DEMO.data.frames.length - 1)
+    PREDICTION_DEMO.idx = 0;
+  PREDICTION_DEMO.timer = setInterval(() => {
+    PREDICTION_DEMO.idx >= PREDICTION_DEMO.data.frames.length - 1
+      ? predictionDemoPause() : predictionDemoSet(PREDICTION_DEMO.idx + 1);
+  }, PREDICTION_DEMO.msPerFrame);
+  document.getElementById("replay-play").textContent = "Pause";
+}
+
+async function predictionDemoStart() {
+  state.replayMode = "prediction-demo";
+  document.getElementById("tour-start").style.display = "none";
+  document.getElementById("replay-start").style.display = "none";
+  document.getElementById("season-start").style.display = "none";
+  document.getElementById("prediction-demo-start").style.display = "none";
+  document.getElementById("detail").innerHTML = "";
+  document.getElementById("replay-extras").innerHTML = "";
+  document.getElementById("replaybar").style.display = "block";
+  document.getElementById("replay-caption").textContent = "Loading synthetic prediction demo…";
+  map.flyTo({ ...PREDICTION_DEMO.view, speed: 0.8 });
+  try {
+    await loadPredictionDemo();
+  } catch (err) {
+    document.getElementById("replay-caption").textContent =
+      "Could not load the prediction demo (" + err.message + ").";
+    return;
+  }
+  ensurePredictionMarker();
+  document.getElementById("replay-slider").max = PREDICTION_DEMO.data.frames.length - 1;
+  document.getElementById("replay-charts").innerHTML = `
+    <div id="prediction-demo-stats"></div>
+    <div class="spark-label">Synthetic rainfall, inches/day</div>
+    <canvas class="spark" id="prediction-demo-rain"></canvas>
+    <div class="spark-label">Synthetic TOC prediction, mg/L</div>
+    <canvas class="spark" id="prediction-demo-toc"></canvas>
+    <div class="spark-label">Synthetic alkalinity prediction, mg/L</div>
+    <canvas class="spark" id="prediction-demo-alk"></canvas>
+    <details class="caveat"><summary>About these values</summary><p>
+      Every value in this replay is deterministic dummy data created only to
+      test the prediction interface, intervals, thresholds, timeline, and map
+      state. None is an observation or production model result.</p></details>`;
+  PREDICTION_DEMO.idx = 0;
+  predictionDemoSet(0);
+  predictionDemoPlay();
+}
+
+function predictionDemoExit() {
+  state.replayMode = null;
+  predictionDemoPause();
+  if (PREDICTION_DEMO.marker) {
+    PREDICTION_DEMO.marker.remove();
+    PREDICTION_DEMO.marker = null;
+  }
+  document.getElementById("replaybar").style.display = "none";
+  document.getElementById("tour-start").style.display = "block";
+  document.getElementById("replay-start").style.display = "block";
+  if (state.basinMeta) document.getElementById("season-start").style.display = "block";
+  document.getElementById("prediction-demo-start").style.display = "block";
+  showIntro();
+  map.flyTo({ ...HOME, speed: 0.75 });
+}
+
+document.getElementById("prediction-demo-start").onclick = predictionDemoStart;
 
 /* ------------------------------------------------------ reservoir depth column */
 

@@ -1,0 +1,59 @@
+series,metric,n_years,first_wy,last_wy,theil_sen_per_decade,mk_z,mk_p,mean
+Berthoud Summit SNOTEL,peak_swe_in,47,1980,2026,-0.7,-1.38,0.1689,22.5
+Berthoud Summit SNOTEL,peak_doy,47,1980,2026,-2.08,-1.03,0.3039,210.0
+Berthoud Summit SNOTEL,melt_out_doy,47,1980,2026,-1.82,-1.4,0.1601,251.7
+Berthoud Summit SNOTEL,april1_swe_in,47,1980,2026,-0.28,-0.6,0.551,18.3
+Buckskin Joe SNOTEL,peak_swe_in,27,2000,2026,-0.21,-0.08,0.9335,12.0
+Buckskin Joe SNOTEL,peak_doy,27,2000,2026,2.5,0.83,0.4037,212.8
+Buckskin Joe SNOTEL,melt_out_doy,27,2000,2026,4.5,1.84,0.0662,244.3
+Buckskin Joe SNOTEL,april1_swe_in,27,2000,2026,-0.2,-0.19,0.8511,9.2
+Copper Mountain SNOTEL,peak_swe_in,47,1980,2026,-0.1,-0.28,0.7761,16.5
+Copper Mountain SNOTEL,peak_doy,47,1980,2026,-2.27,-1.53,0.1253,203.3
+Copper Mountain SNOTEL,melt_out_doy,47,1980,2026,0.86,0.61,0.5445,243.0
+Copper Mountain SNOTEL,april1_swe_in,47,1980,2026,0.09,0.17,0.8616,14.1
+Fremont Pass SNOTEL,peak_swe_in,46,1981,2026,-0.39,-0.73,0.4659,20.4
+Fremont Pass SNOTEL,peak_doy,46,1981,2026,-1.76,-1.1,0.2717,223.3
+Fremont Pass SNOTEL,melt_out_doy,46,1981,2026,-0.48,-0.48,0.6284,260.8
+Fremont Pass SNOTEL,april1_swe_in,46,1981,2026,0.0,-0.04,0.9698,15.9
+Grizzly Peak SNOTEL,peak_swe_in,46,1981,2026,-0.16,-0.32,0.7474,19.0
+Grizzly Peak SNOTEL,peak_doy,46,1981,2026,-1.36,-0.69,0.4892,202.3
+Grizzly Peak SNOTEL,melt_out_doy,46,1981,2026,0.26,0.21,0.8348,244.6
+Grizzly Peak SNOTEL,april1_swe_in,46,1981,2026,0.26,0.49,0.6224,16.6
+Hoosier Pass SNOTEL,peak_swe_in,46,1981,2026,0.0,-0.05,0.9622,17.4
+Hoosier Pass SNOTEL,peak_doy,46,1981,2026,1.22,0.69,0.489,206.7
+Hoosier Pass SNOTEL,melt_out_doy,46,1981,2026,1.76,1.48,0.1391,246.8
+Hoosier Pass SNOTEL,april1_swe_in,46,1981,2026,-0.07,-0.13,0.8945,14.7
+Jackwhacker Gulch SNOTEL,peak_swe_in,28,1999,2026,-1.0,-1.03,0.304,13.1
+Jackwhacker Gulch SNOTEL,peak_doy,28,1999,2026,-4.64,-1.15,0.2516,202.5
+Jackwhacker Gulch SNOTEL,melt_out_doy,28,1999,2026,0.0,0.0,1.0,239.6
+Jackwhacker Gulch SNOTEL,april1_swe_in,28,1999,2026,0.0,0.0,1.0,11.1
+Jones Pass SNOTEL,peak_swe_in,27,2000,2026,-0.32,-0.4,0.692,16.7
+Jones Pass SNOTEL,peak_doy,27,2000,2026,-7.5,-1.46,0.144,202.7
+Jones Pass SNOTEL,melt_out_doy,27,2000,2026,-2.86,-0.61,0.5446,242.3
+Jones Pass SNOTEL,april1_swe_in,27,2000,2026,0.29,0.25,0.8024,14.2
+Michigan Creek SNOTEL,peak_swe_in,28,1999,2026,-1.4,-1.94,0.0527,12.2
+Michigan Creek SNOTEL,peak_doy,28,1999,2026,0.51,0.28,0.7815,204.6
+Michigan Creek SNOTEL,melt_out_doy,28,1999,2026,-0.59,-0.4,0.6915,240.7
+Michigan Creek SNOTEL,april1_swe_in,28,1999,2026,-0.63,-0.69,0.4889,9.9
+Middle Fork Camp SNOTEL,peak_swe_in,25,2002,2026,-0.37,-0.33,0.7435,11.5
+Middle Fork Camp SNOTEL,peak_doy,25,2002,2026,-5.0,-1.19,0.2328,184.8
+Middle Fork Camp SNOTEL,melt_out_doy,25,2002,2026,-7.5,-1.71,0.0877,217.4
+Middle Fork Camp SNOTEL,april1_swe_in,25,2002,2026,-0.08,-0.02,0.9814,10.1
+Rough And Tumble SNOTEL,peak_swe_in,28,1999,2026,-1.23,-1.98,0.048,7.3
+Rough And Tumble SNOTEL,peak_doy,28,1999,2026,-4.7,-1.41,0.1596,201.8
+Rough And Tumble SNOTEL,melt_out_doy,28,1999,2026,-0.65,-0.24,0.8122,228.1
+Rough And Tumble SNOTEL,april1_swe_in,28,1999,2026,-0.36,-0.77,0.4404,5.9
+all mapped SNOTEL (mean anomaly),peak_swe_in,46,1981,2026,-0.2,-0.47,0.6359,0.2
+all mapped SNOTEL (mean anomaly),peak_doy,46,1981,2026,-0.99,-0.73,0.466,0.8
+all mapped SNOTEL (mean anomaly),melt_out_doy,46,1981,2026,0.01,0.05,0.9622,0.4
+all mapped SNOTEL (mean anomaly),april1_swe_in,46,1981,2026,0.04,0.08,0.9396,0.0
+5 pillows with records from WY1981 (mean),peak_swe_in,46,1981,2026,-0.16,-0.36,0.719,19.1
+5 pillows with records from WY1981 (mean),peak_doy,46,1981,2026,-0.78,-0.55,0.5828,209.0
+5 pillows with records from WY1981 (mean),melt_out_doy,46,1981,2026,0.29,0.23,0.8202,249.3
+5 pillows with records from WY1981 (mean),april1_swe_in,46,1981,2026,0.05,0.06,0.9547,15.9
+DILRESCO,peak_storage_af,18,1989,2026,-3812.92,-2.31,0.0208,258735.2
+DILRESCO,min_storage_af,18,1989,2026,1969.69,0.53,0.5959,159016.3
+CHERESCO,peak_storage_af,33,1990,2026,-78.89,-0.74,0.457,78251.7
+CHERESCO,min_storage_af,33,1990,2026,2285.58,1.56,0.1176,56673.3
+CHARESCO,peak_storage_af,38,1989,2026,796.0,2.05,0.0404,31411.2
+CHARESCO,min_storage_af,38,1989,2026,1482.86,2.72,0.0066,18089.7

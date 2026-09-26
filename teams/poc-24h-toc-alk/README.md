@@ -160,7 +160,59 @@ lives.
    shows upstream data approaches persistence as lead grows — 3–7 day
    warnings (Jake's regime) are where this data plausibly wins.
 
-## Reproduce
+   ## Operational rainfall tool and prediction UI
+
+   The original pre-registered analysis above is unchanged. A parallel
+   multi-gauge-capable rainfall pipeline now supports per-gauge travel-time
+   shifting, spatial weights, coverage-aware combination, empirical lag scanning,
+   saved models, and latest-data prediction:
+
+   ```bash
+   pip install -r requirements.txt
+   python3 main.py check-gauges --config config.yaml
+   python3 main.py train --config config.yaml
+   python3 main.py refresh --config config.yaml
+   python3 main.py serve --config config.yaml
+   ```
+
+   Then open
+   `http://localhost:8765/teams/explainable-viz/#prediction`. In a Codespace, use
+   the forwarded port URL recorded in the repository's `OPEN_VISUALIZATION.md`.
+   The Refresh button calls the same-origin server endpoint; root `serve.py`
+   continues to serve static files but cannot perform a refresh.
+
+   The initial repository adapter uses only NOAA station `USC00058022`, with
+   weight 1. It validates the multi-gauge pipeline but is **not** a representative
+   rain-gauge network. NOAA Daily Summaries generally lag by about two days.
+   Because no defensible physical runoff travel time is committed, the default
+   configuration selects a common lag by time-ordered CV and labels it empirical
+   and non-physical. Configure a direct lag or flow-path/velocity before treating
+   travel time as physically based.
+
+   The Prediction tab separates a rainfall-arrival nowcast from a 24-hour
+   forecast, shows prediction intervals and source freshness, and remains
+   explicitly research-only. Predictions remain visible when they fail to beat a
+   baseline; the current 24-hour rainfall-only models do not beat persistence.
+   All readings are provisional and Denver Water's terms are copied into
+   `outputs/`.
+
+   CLI details:
+
+   - `check-gauges` validates inputs and reports weights, travel times, gaps, and
+     coverage without fitting.
+   - `scan-lag` writes the configured empirical lag scan to
+     `outputs/lag_scan.csv`.
+   - `train` writes the model bundle, metadata, metrics, aligned data, effective
+     rainfall, QC table, report plots, and the visualization JSON.
+   - `predict --input PATH` applies the saved gauge set, shifts, weights, policy,
+     and feature order to another rainfall CSV.
+   - `refresh` fetches the latest available NOAA daily observations, caches the
+     response, and updates the prediction JSON. `NOAA_TOKEN`, if needed by the
+     endpoint, is read only from the environment.
+   - `serve` hosts the repository plus `GET /api/predictions/latest` and
+     `POST /api/predictions/refresh`.
+
+   ## Reproduce
 
 ```bash
 pip install -r requirements.txt   # from teams/poc-24h-toc-alk/

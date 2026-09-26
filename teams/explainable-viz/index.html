@@ -81,6 +81,16 @@
     font-size: 13.5px; }
   footer h3 { color: var(--text); font-size: 15px; margin: 0 0 6px; }
   .err { color: #ff9c9c; font-size: 13.5px; }
+  .prediction-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px; margin: 12px 0; }
+  .prediction-value { font-size: 30px; font-weight: 700; margin: 5px 0 0; }
+  .prediction-range { color: var(--muted); font-size: 13px; }
+  .status-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .refresh { background: var(--accent); color: var(--bg); border: 0;
+    border-radius: 8px; padding: 8px 14px; font: inherit; font-weight: 650;
+    cursor: pointer; }
+  .refresh:disabled { opacity: .55; cursor: wait; }
+  .warning-list { margin: 8px 0; color: var(--accent); font-size: 12.5px; }
   @media (max-width: 700px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -88,7 +98,7 @@
 
 <header>
   <h1>The data behind the Design Storm, explained</h1>
-  <div class="sub">Five linked views of the Denver Water challenge data:
+  <div class="sub">Six linked views of the Denver Water challenge data:
   how mountain snow becomes river flow, how storms move water quality
   downstream, and what arrives at the Foothills treatment plant. Companion to
   the <a href="../../design-storm-water-system-3d">3D system map</a>; every
@@ -105,6 +115,7 @@
   <button data-view="storms">3 · Storm anatomy</button>
   <button data-view="seasons">4 · Seasonal rhythm</button>
   <button data-view="basins">5 · Sub-basin behaviour</button>
+  <button data-view="prediction">6 · Prediction</button>
 </div></nav>
 
 <main>
@@ -224,6 +235,26 @@
     coming from this year" context every prediction sits inside.</p></details>
   <div class="chips" id="basin-wy-chips"></div>
   <div class="grid2" id="basin-cards"></div>
+</section>
+
+<section class="view" id="view-prediction">
+  <h2>Latest rainfall-based estimates</h2>
+  <p class="lede">Two products are shown separately: an arrival-time estimate
+  based on rainfall shifted by runoff travel time, and a 24-hour forecast.
+  Both are research models, not operational treatment guidance.</p>
+  <details class="why"><summary>What “latest” means</summary>
+    <p>The initial adapter uses one NOAA daily gauge, not a representative
+    multi-gauge network. NOAA GHCN can publish about two days late. Refresh
+    requests the latest available observation; it does not make delayed data
+    real-time. Travel time is labeled empirical unless a measured physical
+    value is configured.</p></details>
+  <div class="card">
+    <div class="status-row">
+      <button class="refresh" id="prediction-refresh">Refresh NOAA data</button>
+      <span class="readout" id="prediction-status">Loading saved prediction…</span>
+    </div>
+    <div id="prediction-content"></div>
+  </div>
 </section>
 
 </main>
@@ -465,7 +496,7 @@ function hideTooltip() { tooltip.style.display = "none"; }
 /* ------------------------------------------------------------- data + tabs */
 
 let DS = null, SONDE = null, WY = null, STORMS = null, BASINS = null,
-    BASIN_FLOWS = null;
+    BASIN_FLOWS = null, PREDICTION = null;
 
 const tabs = document.querySelectorAll("nav button");
 tabs.forEach((b) => b.onclick = () => selectView(b.dataset.view));
@@ -1035,6 +1066,104 @@ function drawBasins() {
 }
 REDRAW.basins = () => BASINS && drawBasins();
 
+/* ------------------------------------------------------ view 6: prediction */
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function predictionCard(product, target, label) {
+  const item = PREDICTION?.products?.[product]?.[target];
+  if (!item) return `<div class="card"><b>${label}</b><p class="err">Unavailable</p></div>`;
+  const unit = target === "toc" ? "mg/L TOC" : "mg/L alkalinity";
+  const metric = item.metrics || {};
+  const baseline = metric.beats_baseline ? "beat" : "did not beat";
+  const persistence = metric.beats_persistence === undefined ? ""
+    : `; ${metric.beats_persistence ? "beat" : "did not beat"} persistence`;
+  return `<div class="card">
+    <b>${label}</b>
+    <div class="prediction-value" style="color:${target === "toc" ? PAL.toc : PAL.alk}">
+      ${fmt(item.value)} <span style="font-size:13px">${unit}</span>
+    </div>
+    <div class="prediction-range">95% prediction interval:
+      ${fmt(item.lower)}–${fmt(item.upper)} · target ${escapeHtml(item.target_time)}</div>
+    <p class="note">Hold-out MAE ${fmt(metric.holdout_mae)}; ${baseline}
+      the training-mean baseline${persistence}. Predictions remain visible
+      even when baseline skill is negative.</p>
+  </div>`;
+}
+
+function renderPrediction() {
+  const host = $("prediction-content");
+  if (!PREDICTION) {
+    host.innerHTML = `<p class="err">No trained prediction artifact is available.
+      Run <code>python3 main.py train</code> from
+      <code>teams/poc-24h-toc-alk</code>.</p>`;
+    return;
+  }
+  const state = PREDICTION.status === "ok" ? "Latest validated result"
+    : "Stale result; refresh failed";
+  $("prediction-status").textContent =
+    `${state} · issue ${PREDICTION.issue_time || "unknown"} · rainfall through ` +
+    `${PREDICTION.latest_rainfall_observation || "unknown"}`;
+  const error = PREDICTION.refresh_error
+    ? `<p class="err">Refresh error: ${escapeHtml(PREDICTION.refresh_error)}</p>` : "";
+  host.innerHTML = `${error}
+    <h3>Rainfall-arrival nowcast</h3>
+    <div class="prediction-grid">
+      ${predictionCard("arrival_nowcast", "toc", "TOC nowcast")}
+      ${predictionCard("arrival_nowcast", "alk", "Alkalinity nowcast")}
+    </div>
+    <h3>24-hour forecast</h3>
+    <div class="prediction-grid">
+      ${predictionCard("forecast_24h", "toc", "TOC +24 h")}
+      ${predictionCard("forecast_24h", "alk", "Alkalinity +24 h")}
+    </div>
+    <p class="note">Source: ${escapeHtml(PREDICTION.source || "unknown")} ·
+      gauges ${fmt(PREDICTION.gauge_count)} · coverage
+      ${fmt((PREDICTION.coverage_fraction || 0) * 100)}% · travel time:
+      ${escapeHtml(PREDICTION.travel_time_provenance || "unknown")} · generated
+      ${escapeHtml(PREDICTION.generated_at || "unknown")}</p>
+    <ul class="warning-list">${
+      (PREDICTION.warnings || []).map((warning) =>
+        `<li>${escapeHtml(warning)}</li>`).join("")
+    }</ul>`;
+}
+
+async function loadPrediction() {
+  try {
+    PREDICTION = await fetchJson("../../api/predictions/latest");
+  } catch {
+    try { PREDICTION = await fetchJson("viz-data/latest-prediction.json"); }
+    catch { PREDICTION = null; }
+  }
+  renderPrediction();
+}
+
+$("prediction-refresh").onclick = async () => {
+  const button = $("prediction-refresh");
+  button.disabled = true;
+  $("prediction-status").textContent = "Refreshing NOAA and running inference…";
+  try {
+    const response = await fetch("../../api/predictions/refresh", { method: "POST" });
+    const payload = await response.json();
+    PREDICTION = payload;
+    if (!response.ok && !payload.products)
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    renderPrediction();
+  } catch (error) {
+    $("prediction-status").textContent = "Refresh service unavailable";
+    const host = $("prediction-content");
+    host.insertAdjacentHTML("afterbegin",
+      `<p class="err">Could not refresh: ${escapeHtml(error.message)}.
+       The last saved prediction remains below.</p>`);
+  } finally {
+    button.disabled = false;
+  }
+};
+REDRAW.prediction = renderPrediction;
+
 /* ------------------------------------------------------------------- boot */
 
 async function main() {
@@ -1062,9 +1191,10 @@ async function main() {
   initStorms();
   initSeasons();
   initBasins();
+  await loadPrediction();
 
   const hash = location.hash.replace("#", "");
-  if (["timeline", "sonde", "storms", "seasons", "basins"].includes(hash))
+  if (["timeline", "sonde", "storms", "seasons", "basins", "prediction"].includes(hash))
     selectView(hash);
 }
 

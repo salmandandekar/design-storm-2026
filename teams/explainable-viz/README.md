@@ -8,10 +8,12 @@ chosen.
 
 Two things live here:
 
-1. **The 2D suite** (`index.html`): five linked views of the challenge data —
+1. **The 2D suite** (`index.html`): six linked views of the challenge data —
    system timeline, Strontia sonde depth–time heatmap, storm anatomy, seasonal
-   rhythm, and a sub-basin behaviour board. Zero dependencies, hand-drawn
-   canvas, works fully offline.
+   rhythm, a sub-basin behaviour board, and the research prediction panel. The
+   first five views remain zero-dependency and fully offline; the prediction
+   panel can show its last generated JSON offline but needs the PoC server for
+   a live NOAA refresh.
 2. **Data bundles** (`viz-data/`) that also power the sub-basin choropleth,
    water-year replay, and reservoir depth column added to the repo's 3D map
    (`../../design-storm-water-system-3d.html`). The 3D page degrades gracefully
@@ -25,8 +27,18 @@ open http://localhost:8765/teams/explainable-viz/  # 2D suite
 open http://localhost:8765/design-storm-water-system-3d  # 3D map
 ```
 
-The 2D suite needs no network at all. The 3D map streams satellite imagery,
-terrain, and live station charts as before.
+For the Prediction tab and its manual Refresh button:
+
+```
+cd teams/poc-24h-toc-alk
+python3 main.py train --config config.yaml
+python3 main.py serve --config config.yaml
+open http://localhost:8765/teams/explainable-viz/#prediction
+```
+
+The historical views need no network. The prediction refresh uses NOAA Daily
+Summaries, which can lag by about two days, and the 3D map streams satellite
+imagery, terrain, and live station charts as before.
 
 ## What is here
 

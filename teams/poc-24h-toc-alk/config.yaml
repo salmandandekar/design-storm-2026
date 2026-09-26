@@ -1,0 +1,44 @@
+data:
+  rainfall_csv: ../../data/USC00058022.csv
+  gauges_csv: gauges.csv
+  toc_csv: ../../data/FoothillsInfluent.csv
+  timestamp_col: DATE
+  gauge_col: gauge_id
+  rainfall_col: PRCP
+  toc_timestamp_col: DATE
+  toc_columns:
+    toc: TOC_mg_L
+    alk: Alk_mg_L
+  default_timezone: America/Denver
+  resample_interval: 1D
+
+travel_time:
+  method: empirical
+  velocity_ft_per_s: null
+  tau_direct: {}
+  empirical_lag_range: [0D, 7D]
+  empirical_lag_step: 1D
+
+combine:
+  method: explicit
+  missing_gauge_policy: reweight
+  min_coverage: 1.0
+  idw_power: 2
+  idw_target: centroid
+
+features:
+  windows: [1D, 3D, 7D, 14D]
+  include_coverage_fraction: false
+
+model:
+  test_fraction: 0.2
+  cv_folds: 5
+  type: ols
+
+live:
+  provider: noaa_daily_summaries
+  station: USC00058022
+  lookback_days: 60
+  timeout_seconds: 20
+
+output_dir: outputs
