@@ -4,6 +4,10 @@
 
 [Open the 3D Prediction Terrain Demo](https://friendly-space-happiness-7w795w97g7rhxgpr-8765.app.github.dev/prediction-3d)
 
+[Open the Terrain Flow Simulation and 12-hour feasibility page](https://friendly-space-happiness-7w795w97g7rhxgpr-8765.app.github.dev/teams/terrain-flow-sim/)
+— serve with `python3 serve.py` from the repository root; the written
+assessment is `teams/terrain-flow-sim/FEASIBILITY.md`.
+
 ## Prediction outputs
 
 Start the prediction-enabled server first:

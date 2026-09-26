@@ -1,0 +1,79 @@
+{
+ "_comment": "Fetched from NOAA NCEI search service (dataset=daily-summaries, station USC00058022) on 2026-09-25. Do not edit.",
+ "source": "https://www.ncei.noaa.gov/access/services/search/v1/data?dataset=daily-summaries&stations=USC00058022",
+ "id": "USC00058022",
+ "name": "STRONTIA SPRINGS DAM, CO US",
+ "lon": -105.12116,
+ "lat": 39.43426,
+ "network": "COOP (NWS Cooperative Observer Program): a volunteer/utility observer reads a standard 8-inch gauge once a day at a fixed observation time; TOBS (temperature at observation time) is in the record, which is the COOP signature.",
+ "record_start": "1984-12-01",
+ "record_end": "2026-09-23",
+ "elements": {
+  "DAPR": {
+   "start": "2025-11-22",
+   "end": "2026-03-07",
+   "coverage_pct": 1.9
+  },
+  "SNOW": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.4
+  },
+  "WT03": {
+   "start": "1985-05-18",
+   "end": "2023-05-26",
+   "coverage_pct": 0.0
+  },
+  "WT04": {
+   "start": "1985-05-18",
+   "end": "2018-01-15",
+   "coverage_pct": 0.0
+  },
+  "WT05": {
+   "start": "1985-05-18",
+   "end": "1985-05-18",
+   "coverage_pct": 100.0
+  },
+  "PRCP": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.5
+  },
+  "TOBS": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.5
+  },
+  "SNWD": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.0
+  },
+  "WT11": {
+   "start": "2016-02-20",
+   "end": "2016-03-03",
+   "coverage_pct": 16.7
+  },
+  "WT01": {
+   "start": "2009-04-12",
+   "end": "2014-07-13",
+   "coverage_pct": 0.2
+  },
+  "TMAX": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.4
+  },
+  "TMIN": {
+   "start": "1984-12-01",
+   "end": "2026-09-23",
+   "coverage_pct": 99.5
+  },
+  "MDPR": {
+   "start": "2025-11-22",
+   "end": "2026-03-07",
+   "coverage_pct": 1.9
+  }
+ },
+ "siting_note": "The gauge stands at Strontia Springs Dam, the OUTLET of the roughly 2,600 sq mi basin the simulation routes, some 1,000 m below the SNOTEL pillows and 30-180 km downstream of where storms actually fall on South Park and the Platte canyons."
+}

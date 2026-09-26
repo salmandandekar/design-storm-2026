@@ -1,0 +1,27 @@
+series,target,spearman_rho,p_perm,n,el_nino_mean,neutral_mean,la_nina_mean
+all mapped SNOTEL (mean peak SWE),peak_swe_in,0.018,0.9078,46,17.5,17.0,16.7
+Berthoud Summit SNOTEL,peak_swe_in,0.116,0.4509,47,23.6,21.5,22.4
+Berthoud Summit SNOTEL,melt_out_doy,0.102,0.4909,47,,,
+Buckskin Joe SNOTEL,peak_swe_in,0.267,0.178,27,13.9,11.2,10.9
+Buckskin Joe SNOTEL,melt_out_doy,0.258,0.19,27,,,
+Copper Mountain SNOTEL,peak_swe_in,-0.099,0.5043,47,16.8,15.9,16.7
+Copper Mountain SNOTEL,melt_out_doy,0.104,0.4835,47,,,
+Fremont Pass SNOTEL,peak_swe_in,-0.049,0.7357,46,21.0,19.8,20.4
+Fremont Pass SNOTEL,melt_out_doy,0.128,0.3977,46,,,
+Grizzly Peak SNOTEL,peak_swe_in,-0.08,0.5973,46,18.7,18.7,19.6
+Grizzly Peak SNOTEL,melt_out_doy,-0.02,0.896,46,,,
+Hoosier Pass SNOTEL,peak_swe_in,-0.018,0.908,46,18.4,16.6,17.2
+Hoosier Pass SNOTEL,melt_out_doy,0.034,0.8186,46,,,
+Jackwhacker Gulch SNOTEL,peak_swe_in,-0.014,0.9426,28,13.9,12.1,13.1
+Jackwhacker Gulch SNOTEL,melt_out_doy,0.153,0.4297,28,,,
+Jones Pass SNOTEL,peak_swe_in,0.088,0.6577,27,17.8,15.6,16.5
+Jones Pass SNOTEL,melt_out_doy,0.27,0.1754,27,,,
+Michigan Creek SNOTEL,peak_swe_in,0.018,0.926,28,13.0,10.7,12.2
+Michigan Creek SNOTEL,melt_out_doy,0.177,0.3635,28,,,
+Middle Fork Camp SNOTEL,peak_swe_in,-0.022,0.9104,25,11.6,11.1,11.7
+Middle Fork Camp SNOTEL,melt_out_doy,0.231,0.2629,25,,,
+Rough And Tumble SNOTEL,peak_swe_in,0.184,0.3479,28,8.5,6.7,6.8
+Rough And Tumble SNOTEL,melt_out_doy,0.313,0.1074,28,,,
+DILRESCO,peak_storage_af,-0.04,0.8672,19,,,
+CHERESCO,peak_storage_af,0.282,0.1098,34,,,
+CHARESCO,peak_storage_af,0.12,0.4537,39,,,
